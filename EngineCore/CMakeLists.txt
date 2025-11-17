@@ -1,0 +1,41 @@
+set(ENGINECORE_HEADERS
+    include/Artifact/Core/Application.h
+    include/Artifact/Core/Config.h
+    include/Artifact/Core/Instrumentation.h
+    include/Artifact/Rendering/Renderer.h
+    include/Artifact/Scripting/LuaContext.h
+    include/Artifact/Assets/AssetWatcher.h
+    include/Artifact/Physics/PhysicsSystem.h
+    include/Artifact/UI/Overlay.h
+)
+
+set(ENGINECORE_SOURCES
+    Core/Application.cpp
+    Core/Config.cpp
+    Rendering/Renderer.cpp
+    Scripting/LuaContext.cpp
+    Assets/AssetWatcher.cpp
+    Physics/PhysicsSystem.cpp
+    UI/Overlay.cpp
+)
+
+add_library(artifact_engine STATIC ${ENGINECORE_HEADERS} ${ENGINECORE_SOURCES})
+
+add_library(Artifact::EngineCore ALIAS artifact_engine)
+
+target_include_directories(artifact_engine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+target_link_libraries(artifact_engine
+    PUBLIC
+        artifact_third_party
+    PRIVATE
+        glm::glm
+)
+
+artifact_target_enable_warnings(artifact_engine)
+
+if(ARTIFACT_ENABLE_TRACY)
+    target_compile_definitions(artifact_engine PUBLIC TRACY_ENABLE=1)
+endif()
+
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${ENGINECORE_HEADERS} ${ENGINECORE_SOURCES})

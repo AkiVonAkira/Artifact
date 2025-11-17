@@ -1,0 +1,44 @@
+name: Artifact CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            preset: windows-debug
+            build: build-windows-debug
+          - os: ubuntu-latest
+            preset: linux-debug
+            build: build-linux-debug
+          - os: macos-latest
+            preset: macos-debug
+            build: build-macos-debug
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Ninja
+        uses: seanmiddleditch/gha-setup-ninja@v3
+      - name: Configure
+        run: cmake --preset ${{ matrix.preset }}
+      - name: Build
+        run: cmake --build --preset ${{ matrix.build }}
+      - name: Test
+        run: ctest --preset ctest
+      - name: Upload binaries
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifact-${{ matrix.os }}
+          path: |
+            build/${{ matrix.preset }}/artifact_editor*
+            build/${{ matrix.preset }}/artifact_runtime*
+            build/${{ matrix.preset }}/artifact_tests*

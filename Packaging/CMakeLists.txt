@@ -1,0 +1,7 @@
+add_executable(artifact_pkg_builder PackagingMain.cpp)
+
+target_link_libraries(artifact_pkg_builder PRIVATE spdlog)
+
+artifact_target_enable_warnings(artifact_pkg_builder)
+
+set_target_properties(artifact_pkg_builder PROPERTIES FOLDER Packaging)

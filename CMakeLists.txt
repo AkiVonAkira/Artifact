@@ -1,0 +1,36 @@
+cmake_minimum_required(VERSION 3.24)
+
+project(Artifact VERSION 0.1.0 LANGUAGES CXX C)
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
+
+include(ArtifactOptions)
+include(ArtifactWarnings)
+include(ArtifactDependencies)
+
+artifact_fetch_third_party()
+artifact_configure_options()
+artifact_enable_warnings()
+
+add_subdirectory(EngineCore)
+
+if(ARTIFACT_ENABLE_EDITOR)
+	add_subdirectory(Editor)
+endif()
+
+if(ARTIFACT_ENABLE_RUNTIME)
+	add_subdirectory(Runtime)
+endif()
+
+add_subdirectory(Plugins)
+add_subdirectory(Tools)
+add_subdirectory(Games)
+
+if(ARTIFACT_ENABLE_TESTS)
+	enable_testing()
+	add_subdirectory(tests)
+endif()
+
+if(ARTIFACT_BUILD_PACKAGING)
+	add_subdirectory(Packaging)
+endif()

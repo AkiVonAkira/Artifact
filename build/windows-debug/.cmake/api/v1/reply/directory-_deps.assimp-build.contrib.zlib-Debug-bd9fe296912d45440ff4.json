@@ -1,0 +1,50 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"INSTALL"
+		],
+		"files" : 
+		[
+			"build/windows-debug/_deps/assimp-src/contrib/zlib/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 201,
+				"parent" : 0
+			}
+		]
+	},
+	"codemodelVersion" : 
+	{
+		"major" : 2,
+		"minor" : 9
+	},
+	"installers" : 
+	[
+		{
+			"backtrace" : 1,
+			"component" : "Unspecified",
+			"destination" : "lib",
+			"paths" : 
+			[
+				"_deps/assimp-build/contrib/zlib/zlibstaticd.lib"
+			],
+			"targetId" : "zlibstatic::@7fd99959cf8fe87d223a",
+			"targetIndex" : 58,
+			"type" : "target"
+		}
+	],
+	"paths" : 
+	{
+		"build" : "_deps/assimp-build/contrib/zlib",
+		"source" : "build/windows-debug/_deps/assimp-src/contrib/zlib"
+	}
+}

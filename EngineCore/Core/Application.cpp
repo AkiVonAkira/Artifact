@@ -1,0 +1,186 @@
+#include "Artifact/Core/Application.h"
+
+#include "Artifact/Assets/AssetWatcher.h"
+#include "Artifact/Core/Config.h"
+#include "Artifact/Core/Instrumentation.h"
+#include "Artifact/Rendering/Renderer.h"
+#include "Artifact/Scripting/LuaContext.h"
+#include "Artifact/UI/Overlay.h"
+
+#include <GLFW/glfw3.h>
+#include <glad/glad.h>
+#include <imgui.h>
+#include <backends/imgui_impl_glfw.h>
+#include <backends/imgui_impl_opengl3.h>
+#include <spdlog/spdlog.h>
+
+#include <chrono>
+#include <filesystem>
+#include <utility>
+
+namespace Artifact::Core {
+
+namespace {
+constexpr const char* kImguiGlsl = "#version 330";
+}
+
+Application::Application(const ApplicationCreateInfo& info)
+    : m_info(info) {
+    ARTIFACT_ZONE();
+    m_runtimeConfig = LoadRuntimeConfig();
+    initializeWindow();
+    initializeDearImgui();
+    initializeLua();
+
+    m_renderer = std::make_unique<Rendering::Renderer>();
+    m_assetWatcher = std::make_unique<Assets::AssetWatcher>();
+    m_overlay = std::make_unique<UI::Overlay>();
+
+    if (m_assetWatcher) {
+        m_assetWatcher->watch(m_runtimeConfig.paths.rawAssets, [this](const std::filesystem::path& path) {
+            const auto ext = path.extension().string();
+            if (ext == ".lua") {
+                m_luaContext->enqueueReload(path.stem().string());
+            }
+        });
+
+        m_assetWatcher->watch(m_runtimeConfig.paths.shaderRoot, [](const std::filesystem::path& path) {
+            spdlog::info("Shader changed: {} (queued for recompile)", path.string());
+        });
+    }
+}
+
+Application::~Application() {
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+
+    if (m_window) {
+        glfwDestroyWindow(m_window);
+        glfwTerminate();
+        m_window = nullptr;
+    }
+}
+
+void Application::run() {
+    ARTIFACT_ZONE();
+    auto lastFrame = std::chrono::high_resolution_clock::now();
+
+    while (!m_shouldExit && !glfwWindowShouldClose(m_window)) {
+        ARTIFACT_ZONE();
+        auto now = std::chrono::high_resolution_clock::now();
+        const float delta = std::chrono::duration<float>(now - lastFrame).count();
+        lastFrame = now;
+
+        glfwPollEvents();
+        pumpWatchers();
+        m_luaContext->pollReloads();
+
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        Rendering::FrameContext ctx{delta};
+        m_renderer->beginFrame(ctx);
+
+        m_overlay->drawDockspace(m_info.enableEditor);
+        if (m_info.enableEditor) {
+            m_overlay->drawPanels();
+        }
+        m_overlay->drawProfiler(delta * 1000.0f);
+
+        ImGui::Render();
+        m_renderer->endFrame();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+        glfwSwapBuffers(m_window);
+        ARTIFACT_FRAME_MARK;
+    }
+}
+
+void Application::requestExit() {
+    m_shouldExit = true;
+}
+
+void Application::registerEditorPanel(UI::Overlay::PanelCallback callback) {
+    if (!m_overlay || !m_info.enableEditor) {
+        return;
+    }
+    m_overlay->registerPanel(std::move(callback));
+}
+
+void Application::clearEditorPanels() {
+    if (m_overlay) {
+        m_overlay->clearPanels();
+    }
+}
+
+UI::Overlay* Application::overlay() {
+    return m_overlay.get();
+}
+
+Scripting::LuaContext* Application::luaContext() {
+    return m_luaContext.get();
+}
+
+const RuntimeConfig& Application::runtimeConfig() const {
+    return m_runtimeConfig;
+}
+
+void Application::initializeWindow() {
+    ARTIFACT_ZONE();
+    if (!glfwInit()) {
+        spdlog::critical("Failed to initialize GLFW");
+        std::terminate();
+    }
+
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+    m_window = glfwCreateWindow(m_info.width, m_info.height, m_info.windowTitle.c_str(), nullptr, nullptr);
+    if (!m_window) {
+        spdlog::critical("Failed to create GLFW window");
+        std::terminate();
+    }
+
+    glfwMakeContextCurrent(m_window);
+    glfwSwapInterval(1);
+
+    if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(glfwGetProcAddress))) {
+        spdlog::critical("Failed to initialize GLAD");
+        std::terminate();
+    }
+}
+
+void Application::initializeDearImgui() {
+    ARTIFACT_ZONE();
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGui::StyleColorsDark();
+
+    ImGuiIO& io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+
+    ImGui_ImplGlfw_InitForOpenGL(m_window, true);
+    ImGui_ImplOpenGL3_Init(kImguiGlsl);
+}
+
+void Application::initializeLua() {
+    ARTIFACT_ZONE();
+    // Register script reload callback to log changes.
+    m_luaContext = std::make_unique<Scripting::LuaContext>();
+    m_luaContext->registerReloadCallback([](const std::string& module) {
+        spdlog::info("Reloaded Lua module: {}", module);
+    });
+}
+
+void Application::pumpWatchers() {
+    ARTIFACT_ZONE();
+    if (m_assetWatcher) {
+        m_assetWatcher->pump();
+    }
+}
+
+}
