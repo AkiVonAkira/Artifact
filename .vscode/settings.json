@@ -1,0 +1,12 @@
+{
+    "cmake.defaultConfigurePreset": "editor-debug",
+    "cmake.defaultBuildPreset": "build-editor-debug",
+    "cmake.defaultTestPreset": "test-editor",
+    "cmake.defaultLaunchTarget": "artifact_editor",
+    "cmake.runBuildBeforeLaunch": true,
+    "cmake.configureOnOpen": true,
+    "cmake.debugConfig": {
+        "stopAtEntry": false,
+        "console": "integratedTerminal"
+    }
+}

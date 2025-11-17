@@ -2,12 +2,12 @@
 
 GitHub Actions workflow (`.github/workflows/build.yml`) builds Artifact on Windows, Ubuntu, and macOS. Each job performs:
 
-1. Checkout with submodules (FetchContent dependencies are cloned during configure).
+1. Checkout the repo (the vcpkg manifest resolves dependencies during configure).
 2. Install Ninja + dependencies (Python for GLAD regeneration if needed).
-3. Configure using the host-aware preset (`cmake --preset dev-debug`).
-4. Build `artifact_editor`, `artifact_runtime`, `artifact_asset_pipeline`, and `artifact_tests`.
-5. Run `ctest --preset test-dev`.
-6. Upload build artifacts (executables + sample cooked assets) for regression tracking.
+3. Configure using the editor preset (`cmake --preset editor-debug`).
+4. Build `artifact_editor` + `artifact_tests` (runtime/tools stay disabled unless explicitly re-enabled).
+5. Run `ctest --preset test-editor`.
+6. Upload the editor/test binaries for regression tracking.
 
 ## Adding steps
 - Extend the matrix in `build.yml` for additional compilers/preset combos.

@@ -9,186 +9,59 @@
     {
       "name": "base",
       "displayName": "Base",
-      "description": "Common cache settings shared by all presets.",
+      "description": "Shared settings for editor-first builds.",
       "hidden": true,
       "generator": "Ninja",
-      "binaryDir": "${sourceDir}/build/${presetName}",
+      "binaryDir": "${sourceDir}/build/${hostSystemName}/${presetName}",
+      "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
       "cacheVariables": {
         "CMAKE_CXX_STANDARD": "23",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
         "ARTIFACT_ENABLE_EDITOR": "ON",
-        "ARTIFACT_ENABLE_RUNTIME": "ON",
+        "ARTIFACT_ENABLE_RUNTIME": "OFF",
         "ARTIFACT_ENABLE_TESTS": "ON",
         "ARTIFACT_ENABLE_TRACY": "ON",
-        "ARTIFACT_ENABLE_TOOLS": "ON",
-        "ARTIFACT_BUILD_PACKAGING": "ON"
+        "ARTIFACT_ENABLE_TOOLS": "OFF",
+        "ARTIFACT_BUILD_PACKAGING": "OFF"
       }
     },
     {
-      "name": "dev-debug",
-      "displayName": "Dev Debug (auto host)",
-      "description": "Debug build of editor, runtime, tools, and tests for the current host.",
+      "name": "editor-debug",
+      "displayName": "Editor Debug",
+      "description": "Debug build of the editor + tests for the current host.",
       "inherits": "base",
-      "binaryDir": "${sourceDir}/build/${hostSystemName}/dev-debug",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug"
       }
     },
     {
-      "name": "dev-release",
-      "displayName": "Dev Release (auto host)",
-      "description": "RelWithDebInfo build for the current host with Tracy enabled.",
+      "name": "editor-release",
+      "displayName": "Editor Release",
+      "description": "RelWithDebInfo editor build (Tracy off by default).",
       "inherits": "base",
-      "binaryDir": "${sourceDir}/build/${hostSystemName}/dev-release",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
-        "ARTIFACT_ENABLE_TRACY": "ON"
-      }
-    },
-    {
-      "name": "ship-release",
-      "displayName": "Shipping Release",
-      "description": "Stripped release that disables editor/tests but keeps runtime + packaging.",
-      "inherits": "dev-release",
-      "binaryDir": "${sourceDir}/build/${hostSystemName}/ship-release",
-      "cacheVariables": {
-        "ARTIFACT_ENABLE_EDITOR": "OFF",
-        "ARTIFACT_ENABLE_TESTS": "OFF",
         "ARTIFACT_ENABLE_TRACY": "OFF"
       }
-    },
-    {
-      "name": "tools-headless",
-      "displayName": "Tools & Tests only",
-      "description": "Build asset pipeline + tests without editor/runtime.",
-      "inherits": "dev-debug",
-      "binaryDir": "${sourceDir}/build/${hostSystemName}/tools-headless",
-      "cacheVariables": {
-        "ARTIFACT_ENABLE_EDITOR": "OFF",
-        "ARTIFACT_ENABLE_RUNTIME": "OFF"
-      }
-    },
-    {
-      "name": "windows-debug",
-      "displayName": "Windows Debug (legacy)",
-      "inherits": "dev-debug",
-      "hidden": true,
-      "condition": {
-        "type": "equals",
-        "lhs": "${hostSystemName}",
-        "rhs": "Windows"
-      },
-      "binaryDir": "${sourceDir}/build/windows-debug"
-    },
-    {
-      "name": "windows-release",
-      "displayName": "Windows Release (legacy)",
-      "inherits": "dev-release",
-      "hidden": true,
-      "condition": {
-        "type": "equals",
-        "lhs": "${hostSystemName}",
-        "rhs": "Windows"
-      },
-      "binaryDir": "${sourceDir}/build/windows-release"
-    },
-    {
-      "name": "linux-debug",
-      "displayName": "Linux Debug (legacy)",
-      "inherits": "dev-debug",
-      "hidden": true,
-      "condition": {
-        "type": "equals",
-        "lhs": "${hostSystemName}",
-        "rhs": "Linux"
-      },
-      "binaryDir": "${sourceDir}/build/linux-debug"
-    },
-    {
-      "name": "linux-release",
-      "displayName": "Linux Release (legacy)",
-      "inherits": "dev-release",
-      "hidden": true,
-      "condition": {
-        "type": "equals",
-        "lhs": "${hostSystemName}",
-        "rhs": "Linux"
-      },
-      "binaryDir": "${sourceDir}/build/linux-release"
-    },
-    {
-      "name": "macos-debug",
-      "displayName": "macOS Debug (legacy)",
-      "inherits": "dev-debug",
-      "hidden": true,
-      "condition": {
-        "type": "equals",
-        "lhs": "${hostSystemName}",
-        "rhs": "Darwin"
-      },
-      "binaryDir": "${sourceDir}/build/macos-debug"
-    },
-    {
-      "name": "macos-release",
-      "displayName": "macOS Release (legacy)",
-      "inherits": "dev-release",
-      "hidden": true,
-      "condition": {
-        "type": "equals",
-        "lhs": "${hostSystemName}",
-        "rhs": "Darwin"
-      },
-      "binaryDir": "${sourceDir}/build/macos-release"
     }
   ],
   "buildPresets": [
     {
-      "name": "build-dev-debug",
-      "displayName": "Build dev debug",
-      "configurePreset": "dev-debug"
+      "name": "build-editor-debug",
+      "displayName": "Build editor debug",
+      "configurePreset": "editor-debug"
     },
     {
-      "name": "build-dev-release",
-      "displayName": "Build dev release",
-      "configurePreset": "dev-release"
-    },
-    {
-      "name": "build-ship-release",
-      "displayName": "Build ship release",
-      "configurePreset": "ship-release"
-    },
-    {
-      "name": "build-tools-headless",
-      "displayName": "Build tools headless",
-      "configurePreset": "tools-headless"
-    },
-    {
-      "name": "build-windows-debug",
-      "configurePreset": "windows-debug",
-      "hidden": true
-    },
-    {
-      "name": "build-linux-debug",
-      "configurePreset": "linux-debug",
-      "hidden": true
-    },
-    {
-      "name": "build-macos-debug",
-      "configurePreset": "macos-debug",
-      "hidden": true
+      "name": "build-editor-release",
+      "displayName": "Build editor release",
+      "configurePreset": "editor-release"
     }
   ],
   "testPresets": [
     {
-      "name": "test-dev",
-      "displayName": "Test dev debug",
-      "configurePreset": "dev-debug"
-    },
-    {
-      "name": "ctest",
-      "displayName": "ctest (legacy)",
-      "configurePreset": "dev-debug",
-      "hidden": true
+      "name": "test-editor",
+      "displayName": "Test editor debug",
+      "configurePreset": "editor-debug"
     }
   ]
 }

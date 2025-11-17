@@ -1,0 +1,25 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build artifact_editor (editor-debug)",
+            "type": "shell",
+            "command": "cmake",
+            "args": [
+                "--build",
+                "--preset",
+                "build-editor-debug",
+                "--target",
+                "artifact_editor"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": "$msCompile"
+        }
+    ]
+}

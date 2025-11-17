@@ -25,17 +25,16 @@ jobs:
       - name: Install Ninja
         uses: seanmiddleditch/gha-setup-ninja@v3
       - name: Configure
-        run: cmake --preset dev-debug
+        run: cmake --preset editor-debug
       - name: Build
-        run: cmake --build --preset build-dev-debug
+        run: cmake --build --preset build-editor-debug
       - name: Test
-        run: ctest --preset test-dev
+        run: ctest --preset test-editor
       - name: Upload binaries
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: artifact-${{ matrix.os }}
           path: |
-            build/${{ matrix.host }}/dev-debug/artifact_editor*
-            build/${{ matrix.host }}/dev-debug/artifact_runtime*
-            build/${{ matrix.host }}/dev-debug/tests/artifact_tests*
+            build/${{ matrix.host }}/editor-debug/artifact_editor*
+            build/${{ matrix.host }}/editor-debug/tests/artifact_tests*

@@ -8,7 +8,7 @@ include(ArtifactOptions)
 include(ArtifactWarnings)
 include(ArtifactDependencies)
 
-artifact_fetch_third_party()
+artifact_import_dependencies()
 artifact_configure_options()
 artifact_enable_warnings()
 

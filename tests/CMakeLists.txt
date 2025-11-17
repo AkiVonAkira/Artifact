@@ -1,3 +1,5 @@
+find_package(Catch2 CONFIG REQUIRED)
+
 add_executable(artifact_tests
     test_config.cpp
 )

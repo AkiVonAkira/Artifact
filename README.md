@@ -16,21 +16,29 @@ Artifact is a cross-platform OpenGL 3.3+ engine/editor pairing focused on high i
 1. **Install prerequisites**
    - CMake 3.24+
    - Ninja (recommended)
+   - [vcpkg](https://github.com/microsoft/vcpkg) (set `VCPKG_ROOT` or place a cloned `vcpkg/` folder next to the repo; the presets pick it up automatically)
    - Python 3 (only needed if you plan to regenerate GLAD bindings)
    - A C++23-compatible compiler (MSVC v143, Clang 16+, or GCC 12+)
 2. **Configure** (auto-detects your host platform)
    ```pwsh
-   cmake --preset dev-debug
+   cmake --preset editor-debug
    ```
 3. **Build**
    ```pwsh
-   cmake --build --preset build-dev-debug
+   cmake --build --preset build-editor-debug
    ```
-4. **Run** – binaries land under `build/<HostSystemName>/dev-debug`. On Windows that resolves to `build/Windows/dev-debug`:
+4. **Run** – binaries land under `build/<HostSystemName>/editor-debug`. On Windows that resolves to `build/Windows/editor-debug`:
    ```pwsh
-   .\build\Windows\dev-debug\artifact_editor.exe
+   .\build\Windows\editor-debug\artifact_editor.exe
    ```
    On Linux/macOS replace `Windows` with `Linux` or `Darwin` respectively when launching from the terminal.
+
+## IDE shortcuts
+- **Visual Studio Code** – the bundled settings default to the `editor-debug` preset and automatically invoke the `build-editor-debug` task before launching the editor target.
+- **JetBrains Rider / CLion** – select the `editor-debug` CMake profile for day-to-day work. Release profiling builds are available via `editor-release` if you need RelWithDebInfo binaries without Tracy.
+
+## Dependency management
+Artifact now relies on the `vcpkg` manifest (`vcpkg.json`) for GLFW, GLAD, ImGui, LuaJIT, Tracy, and the rest of the third-party stack. Set `VCPKG_ROOT` (or drop a cloned `vcpkg/` folder next to the repo) and the bundled presets/toolchain will automatically locate `scripts/buildsystems/vcpkg.cmake` and install the pinned dependencies into `vcpkg_installed/`.
 
 ## Repo layout
 - `EngineCore/` – rendering, ECS, Lua, physics, asset IO, UI wrappers.
@@ -51,11 +59,11 @@ Artifact is a cross-platform OpenGL 3.3+ engine/editor pairing focused on high i
 5. Shaders trigger GLSL compile + SPIR-V validation before re-binding to the renderer.
 
 ## Packaging
-- **Dev**: Use loose directories, live reload, asserts on.
-- **Ship**: Run `artifact_asset_pipeline` then `artifact_pkg_builder --name SplineShooter --version 0.1.0` to emit `.artifactpkg.manifest`. Future work will zip/sign assets automatically.
+- **Dev**: Stay inside the editor—use loose directories, live reload, asserts on.
+- **Ship**: Use the in-editor packaging panel to cook content and generate `.artifactpkg` bundles directly from the running editor session. The legacy CLI helpers (`artifact_asset_pipeline`, `artifact_pkg_builder`) remain available if you re-enable `ARTIFACT_ENABLE_TOOLS` / `ARTIFACT_BUILD_PACKAGING`, but they’re no longer part of the default build.
 
 ## CI
-GitHub Actions workflow (`.github/workflows/build.yml`) configures/pipelines builds for Windows/MSVC, Ubuntu/Clang, and macOS/Clang. Each job configures via presets, builds editor/runtime/tests, and executes the Catch2 suite.
+GitHub Actions workflow (`.github/workflows/build.yml`) configures/pipelines builds for Windows/MSVC, Ubuntu/Clang, and macOS/Clang. Each job uses the `editor-debug` preset, builds the editor + tests, and runs the Catch2 suite. Re-enable optional components (runtime/tools/packaging) via cache variables if your fork needs them.
 
 ## License
 All rights reserved. See `LICENSE`. Contributions are welcomed via pull requests; by submitting a contribution you agree to transfer necessary rights to the project owner.

@@ -1,0 +1,32 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "artifact",
+  "version-string": "0.1.0",
+  "dependencies": [
+    "assimp",
+    "box2d",
+    "catch2",
+    "efsw",
+    "entt",
+    "glad",
+    "glfw3",
+    "glm",
+    {
+      "name": "imgui",
+      "default-features": false,
+      "features": [
+        "docking-experimental",
+        "glfw-binding",
+        "opengl3-binding"
+      ]
+    },
+    "imguizmo",
+    "joltphysics",
+    "luajit",
+    "sol2",
+    "spdlog",
+    "stb",
+    "tracy",
+    "pkgconf"
+  ]
+}

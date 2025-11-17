@@ -1,0 +1,32 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Artifact Editor (MSVC)",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${command:cmake.launchTargetPath}",
+            "cwd": "${command:cmake.getLaunchTargetDirectory}",
+            "stopAtEntry": false,
+            "preLaunchTask": "build artifact_editor (editor-debug)",
+            "externalConsole": false
+        },
+        {
+            "name": "Artifact Editor (gdb/lldb)",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${command:cmake.launchTargetPath}",
+            "cwd": "${command:cmake.getLaunchTargetDirectory}",
+            "stopAtEntry": false,
+            "preLaunchTask": "build artifact_editor (editor-debug)",
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "linux": {
+                "MIMode": "gdb"
+            },
+            "osx": {
+                "MIMode": "lldb"
+            }
+        }
+    ]
+}

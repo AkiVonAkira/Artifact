@@ -1,10 +1,10 @@
 function(artifact_configure_options)
     option(ARTIFACT_ENABLE_EDITOR "Build the Artifact editor" ON)
-    option(ARTIFACT_ENABLE_RUNTIME "Build the standalone runtime" ON)
+    option(ARTIFACT_ENABLE_RUNTIME "Build the standalone runtime" OFF)
     option(ARTIFACT_ENABLE_TESTS "Build Artifact tests" ON)
-    option(ARTIFACT_BUILD_PACKAGING "Enable packaging utilities" ON)
+    option(ARTIFACT_BUILD_PACKAGING "Enable packaging utilities" OFF)
     option(ARTIFACT_ENABLE_TRACY "Enable Tracy profiling" ON)
-    option(ARTIFACT_ENABLE_TOOLS "Build developer tools" ON)
+    option(ARTIFACT_ENABLE_TOOLS "Build developer tools" OFF)
 
     set(CMAKE_CXX_STANDARD 23 CACHE STRING "" FORCE)
     set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -45,27 +45,6 @@ function(artifact_configure_options)
     set(ARTIFACT_HOST_IS_MACOS ${_artifact_host_is_macos} CACHE BOOL "True if Artifact is configuring on macOS" FORCE)
 
     message(STATUS "Artifact host platform detected: ${ARTIFACT_HOST_PLATFORM}")
-
-    if(NOT DEFINED ARTIFACT_THIRD_PARTY_ROOT)
-        set(ARTIFACT_THIRD_PARTY_ROOT "${CMAKE_SOURCE_DIR}/ThirdParty" CACHE PATH "Root directory where shared third-party builds will be staged" FORCE)
-    endif()
-
-    if(DEFINED CMAKE_PRESET_NAME)
-        set(_artifact_third_party_key "${CMAKE_PRESET_NAME}")
-    elseif(CMAKE_CONFIGURATION_TYPES)
-        set(_artifact_third_party_key "multi-config")
-    elseif(CMAKE_BUILD_TYPE)
-        string(TOLOWER "${CMAKE_BUILD_TYPE}" _artifact_third_party_key)
-    else()
-        set(_artifact_third_party_key "default")
-    endif()
-
-    set(ARTIFACT_THIRD_PARTY_DIR "${ARTIFACT_THIRD_PARTY_ROOT}/${ARTIFACT_HOST_PLATFORM}/${_artifact_third_party_key}"
-        CACHE PATH "Variant-specific folder where FetchContent dependencies are cached" FORCE)
-    file(MAKE_DIRECTORY "${ARTIFACT_THIRD_PARTY_DIR}")
-    set(FETCHCONTENT_BASE_DIR "${ARTIFACT_THIRD_PARTY_DIR}" CACHE PATH "Root used for FetchContent dependency trees" FORCE)
-
-    message(STATUS "Artifact third-party cache: ${FETCHCONTENT_BASE_DIR}")
 
     include(CheckIPOSupported)
     check_ipo_supported(RESULT ipo_supported OUTPUT ipo_msg)
