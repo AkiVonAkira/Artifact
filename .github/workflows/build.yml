@@ -15,30 +15,27 @@ jobs:
       matrix:
         include:
           - os: windows-latest
-            preset: windows-debug
-            build: build-windows-debug
+            host: Windows
           - os: ubuntu-latest
-            preset: linux-debug
-            build: build-linux-debug
+            host: Linux
           - os: macos-latest
-            preset: macos-debug
-            build: build-macos-debug
+            host: Darwin
     steps:
       - uses: actions/checkout@v4
       - name: Install Ninja
         uses: seanmiddleditch/gha-setup-ninja@v3
       - name: Configure
-        run: cmake --preset ${{ matrix.preset }}
+        run: cmake --preset dev-debug
       - name: Build
-        run: cmake --build --preset ${{ matrix.build }}
+        run: cmake --build --preset build-dev-debug
       - name: Test
-        run: ctest --preset ctest
+        run: ctest --preset test-dev
       - name: Upload binaries
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: artifact-${{ matrix.os }}
           path: |
-            build/${{ matrix.preset }}/artifact_editor*
-            build/${{ matrix.preset }}/artifact_runtime*
-            build/${{ matrix.preset }}/artifact_tests*
+            build/${{ matrix.host }}/dev-debug/artifact_editor*
+            build/${{ matrix.host }}/dev-debug/artifact_runtime*
+            build/${{ matrix.host }}/dev-debug/tests/artifact_tests*

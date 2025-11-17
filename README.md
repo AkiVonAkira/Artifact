@@ -18,18 +18,19 @@ Artifact is a cross-platform OpenGL 3.3+ engine/editor pairing focused on high i
    - Ninja (recommended)
    - Python 3 (only needed if you plan to regenerate GLAD bindings)
    - A C++23-compatible compiler (MSVC v143, Clang 16+, or GCC 12+)
-2. **Configure**
+2. **Configure** (auto-detects your host platform)
    ```pwsh
-   cmake --preset windows-debug
+   cmake --preset dev-debug
    ```
 3. **Build**
    ```pwsh
-   cmake --build --preset build-windows-debug
+   cmake --build --preset build-dev-debug
    ```
-4. **Run**
+4. **Run** – binaries land under `build/<HostSystemName>/dev-debug`. On Windows that resolves to `build/Windows/dev-debug`:
    ```pwsh
-   .\build\windows-debug\artifact_editor.exe
+   .\build\Windows\dev-debug\artifact_editor.exe
    ```
+   On Linux/macOS replace `Windows` with `Linux` or `Darwin` respectively when launching from the terminal.
 
 ## Repo layout
 - `EngineCore/` – rendering, ECS, Lua, physics, asset IO, UI wrappers.

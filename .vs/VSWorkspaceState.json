@@ -1,13 +1,10 @@
 {
   "OutputFoldersPerTargetSystem": {
     "Local Machine": [
-      "build\\base",
-      "build\\windows-debug",
-      "build\\windows-release",
-      "build\\linux-debug",
-      "build\\linux-release",
-      "build\\macos-debug",
-      "build\\macos-release"
+      "build\\Windows\\dev-debug",
+      "build\\Windows\\dev-release",
+      "build\\Windows\\ship-release",
+      "build\\Windows\\tools-headless"
     ]
   },
   "ExpandedNodes": [

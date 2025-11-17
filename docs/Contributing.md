@@ -3,7 +3,7 @@
 ## Branch & PR flow
 1. Fork or branch from `main`.
 2. Keep feature branches short-lived; rebase on latest `main` before opening a PR.
-3. Run `cmake --build --preset build-windows-debug` (or platform equivalent) plus `ctest --preset ctest` before submitting.
+3. Run `cmake --build --preset build-dev-debug` plus `ctest --preset test-dev` before submitting.
 4. Include profiling captures (Tracy `.tracy` file) for performance-sensitive changes.
 
 ## Coding guidelines

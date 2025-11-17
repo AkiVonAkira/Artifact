@@ -21,9 +21,9 @@
 ## Presets
 | Preset | Generator | Notes |
 | --- | --- | --- |
-| `windows-debug` | Ninja | MSVC v143, Debug. |
-| `linux-debug` | Ninja | Clang/GCC, Debug. |
-| `macos-debug` | Ninja | AppleClang, Debug. |
-| `*-release` | Ninja | `RelWithDebInfo`, unity builds + IPO. |
+| `dev-debug` | Ninja | Debug build of editor/runtime/tools/tests for the detected host (`build/<Host>/dev-debug`). |
+| `dev-release` | Ninja | `RelWithDebInfo` build with Tracy enabled for profiling. |
+| `ship-release` | Ninja | Runtime + tools only, Tracy/tests disabled for packaging. |
+| `tools-headless` | Ninja | Asset pipeline + tests without the editor/runtime (useful for CI utilities). |
 
-Run `cmake --preset linux-debug` to configure, `cmake --build --preset build-linux-debug` to compile, and `ctest --preset ctest` for tests.
+Run `cmake --preset dev-debug` to configure, `cmake --build --preset build-dev-debug` to compile, and `ctest --preset test-dev` for tests. Legacy presets such as `windows-debug` still exist (hidden) for older scripts, but all docs now recommend the host-aware presets above.
