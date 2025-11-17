@@ -1,7 +1,7 @@
 #pragma once
 
 #if defined(TRACY_ENABLE)
-#   include <Tracy.hpp>
+#   include <tracy/Tracy.hpp>
 #   define ARTIFACT_FRAME_MARK FrameMark
 #   define ARTIFACT_ZONE() ZoneScoped
 #else
