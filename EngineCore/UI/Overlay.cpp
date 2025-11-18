@@ -1,6 +1,43 @@
 #include "Artifact/UI/Overlay.h"
 
 #include <imgui.h>
+#include <imgui_internal.h>
+
+#include <filesystem>
+
+namespace {
+
+bool ShouldApplyDefaultLayout(const ImGuiIO& io) {
+    if (!io.IniFilename || io.IniFilename[0] == '\0') {
+        return true;
+    }
+
+    std::error_code ec;
+    return !std::filesystem::exists(io.IniFilename, ec);
+}
+
+void BuildDefaultLayout(ImGuiID dockspaceID) {
+    ImGui::DockBuilderRemoveNode(dockspaceID);
+    ImGui::DockBuilderAddNode(dockspaceID, ImGuiDockNodeFlags_DockSpace);
+    ImGui::DockBuilderSetNodeSize(dockspaceID, ImGui::GetMainViewport()->Size);
+
+    ImGuiID dockMainID = dockspaceID;
+    ImGuiID dockLeft = ImGui::DockBuilderSplitNode(dockMainID, ImGuiDir_Left, 0.2f, nullptr, &dockMainID);
+    ImGuiID dockRight = ImGui::DockBuilderSplitNode(dockMainID, ImGuiDir_Right, 0.25f, nullptr, &dockMainID);
+    ImGuiID dockBottom = ImGui::DockBuilderSplitNode(dockMainID, ImGuiDir_Down, 0.27f, nullptr, &dockMainID);
+    ImGuiID dockLeftBottom = ImGui::DockBuilderSplitNode(dockLeft, ImGuiDir_Down, 0.5f, nullptr, &dockLeft);
+
+    ImGui::DockBuilderDockWindow("Hierarchy", dockLeft);
+    ImGui::DockBuilderDockWindow("Assets", dockLeftBottom);
+    ImGui::DockBuilderDockWindow("Scene", dockMainID);
+    ImGui::DockBuilderDockWindow("Inspector", dockRight);
+    ImGui::DockBuilderDockWindow("Frame Stats", dockRight);
+    ImGui::DockBuilderDockWindow("Console", dockBottom);
+
+    ImGui::DockBuilderFinish(dockspaceID);
+}
+
+} // namespace
 
 namespace Artifact::UI {
 
@@ -42,7 +79,19 @@ void Overlay::drawDockspace(bool enableEditorPanels) {
     ImGuiIO& io = ImGui::GetIO();
     if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable) {
         ImGuiID dockspaceID = ImGui::GetID("ArtifactDockspaceID");
+        if (ImGui::BeginMenuBar()) {
+            if (m_statusBarCallback) {
+                m_statusBarCallback();
+            }
+            ImGui::EndMenuBar();
+        }
+
         ImGui::DockSpace(dockspaceID, ImVec2(0.0f, 0.0f), dockspaceFlags);
+
+        if (ShouldApplyDefaultLayout(io) || m_forceDefaultLayout) {
+            BuildDefaultLayout(dockspaceID);
+            m_forceDefaultLayout = false;
+        }
     }
 
     ImGui::End();
@@ -68,6 +117,14 @@ void Overlay::registerPanel(PanelCallback callback) {
 
 void Overlay::clearPanels() {
     m_panelCallbacks.clear();
+}
+
+void Overlay::setStatusBarCallback(PanelCallback callback) {
+    m_statusBarCallback = std::move(callback);
+}
+
+void Overlay::requestDefaultLayout() {
+    m_forceDefaultLayout = true;
 }
 
 }

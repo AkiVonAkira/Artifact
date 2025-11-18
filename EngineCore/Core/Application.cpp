@@ -7,11 +7,11 @@
 #include "Artifact/Scripting/LuaContext.h"
 #include "Artifact/UI/Overlay.h"
 
-#include <GLFW/glfw3.h>
 #include <glad/glad.h>
+#include <GLFW/glfw3.h>
 #include <imgui.h>
-#include <backends/imgui_impl_glfw.h>
-#include <backends/imgui_impl_opengl3.h>
+#include <imgui_impl_glfw.h>
+#include <imgui_impl_opengl3.h>
 #include <spdlog/spdlog.h>
 
 #include <chrono>
@@ -72,6 +72,10 @@ void Application::run() {
         const float delta = std::chrono::duration<float>(now - lastFrame).count();
         lastFrame = now;
 
+        int fbWidth = 0;
+        int fbHeight = 0;
+        glfwGetFramebufferSize(m_window, &fbWidth, &fbHeight);
+
         glfwPollEvents();
         pumpWatchers();
         m_luaContext->pollReloads();
@@ -80,7 +84,7 @@ void Application::run() {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        Rendering::FrameContext ctx{delta};
+        Rendering::FrameContext ctx{delta, fbWidth, fbHeight};
         m_renderer->beginFrame(ctx);
 
         m_overlay->drawDockspace(m_info.enableEditor);
@@ -92,6 +96,13 @@ void Application::run() {
         ImGui::Render();
         m_renderer->endFrame();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+        if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
+            GLFWwindow* backupWindow = glfwGetCurrentContext();
+            ImGui::UpdatePlatformWindows();
+            ImGui::RenderPlatformWindowsDefault();
+            glfwMakeContextCurrent(backupWindow);
+        }
 
         glfwSwapBuffers(m_window);
         ARTIFACT_FRAME_MARK;
@@ -115,12 +126,28 @@ void Application::clearEditorPanels() {
     }
 }
 
+void Application::setStatusBarCallback(UI::Overlay::PanelCallback callback) {
+    if (m_overlay) {
+        m_overlay->setStatusBarCallback(std::move(callback));
+    }
+}
+
+void Application::resetLayout() {
+    if (m_overlay) {
+        m_overlay->requestDefaultLayout();
+    }
+}
+
 UI::Overlay* Application::overlay() {
     return m_overlay.get();
 }
 
 Scripting::LuaContext* Application::luaContext() {
     return m_luaContext.get();
+}
+
+Rendering::Renderer* Application::renderer() {
+    return m_renderer.get();
 }
 
 const RuntimeConfig& Application::runtimeConfig() const {

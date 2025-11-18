@@ -39,9 +39,12 @@ public:
     void requestExit();
     void registerEditorPanel(UI::Overlay::PanelCallback callback);
     void clearEditorPanels();
+    void setStatusBarCallback(UI::Overlay::PanelCallback callback);
+    void resetLayout();
 
     UI::Overlay* overlay();
     Scripting::LuaContext* luaContext();
+    Rendering::Renderer* renderer();
     const RuntimeConfig& runtimeConfig() const;
 
 private:

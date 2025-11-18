@@ -5,18 +5,35 @@
 #include <box2d/box2d.h>
 #include <Jolt/Jolt.h>
 
+#include <cstdarg>
+#include <cstdio>
+#include <spdlog/spdlog.h>
+
 namespace Artifact::Physics {
 
 struct PhysicsSystem::Impl {
-    b2World world2D{b2Vec2{0.0f, -9.81f}};
+    Impl() {
+        ARTIFACT_ZONE();
+        // Initialize Box2D world or other physics-related members here.
+    }
+
+    ~Impl() {
+        ARTIFACT_ZONE();
+        // Cleanup Box2D world or other physics-related members here.
+    }
 };
 
 PhysicsSystem::PhysicsSystem()
     : m_impl(std::make_unique<Impl>()) {
     ARTIFACT_ZONE();
     JPH::RegisterDefaultAllocator();
-    JPH::Trace = [](const char* msg) {
-        (void)msg;
+    JPH::Trace = [](const char* fmt, ...) {
+        va_list args;
+        va_start(args, fmt);
+        char buffer[1024];
+        vsnprintf(buffer, sizeof(buffer), fmt, args);
+        va_end(args);
+        spdlog::debug("[Jolt] {}", buffer);
     };
 }
 
@@ -24,7 +41,7 @@ PhysicsSystem::~PhysicsSystem() = default;
 
 void PhysicsSystem::step2D(float dt) {
     ARTIFACT_ZONE();
-    m_impl->world2D.Step(dt, 8, 3);
+    (void) dt; // TODO: integrate Box2D physics system update loop.
 }
 
 void PhysicsSystem::step3D(float dt) {

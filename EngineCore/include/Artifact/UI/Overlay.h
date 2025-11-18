@@ -15,9 +15,13 @@ public:
     void drawPanels();
     void registerPanel(PanelCallback callback);
     void clearPanels();
+    void setStatusBarCallback(PanelCallback callback);
+    void requestDefaultLayout();
 
 private:
     std::vector<PanelCallback> m_panelCallbacks;
+    PanelCallback m_statusBarCallback;
+    bool m_forceDefaultLayout{false};
 };
 
 }

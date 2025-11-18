@@ -8,5 +8,8 @@
     "cmake.debugConfig": {
         "stopAtEntry": false,
         "console": "integratedTerminal"
+    },
+    "files.associations": {
+        "xstring": "cpp"
     }
 }

@@ -35,8 +35,12 @@ Artifact/
 ├── Runtime/              # Thin launcher linking EngineCore + selected plugins
 ├── Plugins/
 │   ├── Core/             # Shared plugin helpers
-│   ├── SplineShooter/    # MVP gameplay systems (spline editor, AI, scoring)
-│   └── Platformer2D/     # Reserved for future work
+│   ├── Tilemap2D/        # 2D tilemap editor + runtime components
+│   ├── Camera3D/         # 3D camera controller + editor gizmos
+│   ├── Physics3D/        # Jolt Physics plugin exposing 3D physics components
+│   ├── SplineShooter/    # Spline shooter gameplay, AI, HUD, sample scripts
+│   ├── BehaviorTree/     # Behavior tree editor + runtime evaluation
+│   └── Spline/           # Spline editor, components, runtime evaluation
 ├── Tools/
 │   ├── AssetPipeline/    # Cook on import CLI (textures, models, audio, shaders)
 │   ├── Packaging/        # .artifactpkg builder + signing
@@ -58,7 +62,11 @@ Artifact/
 - **Console & Lua REPL**: Console output shows editor events with filters and auto-scroll, and embeds a REPL-style input that executes arbitrary Lua against the live `LuaContext`.
 - **Asset Browser**: A lightweight asset panel lists discovered Lua scripts (future-proofed for other asset types) and supports double-click assignment to the selected entity.
 
-These systems live entirely in the `Editor` target; they register ImGui panels through the shared overlay so the runtime build stays minimal.
+## Lua Behaviour Lifecycle
+- **Awake**: Called the first frame an entity’s script is instantiated or reloaded. `LuaContext` allocates the behaviour, injects component handles, and runs `Behaviour:Awake()`. Use this for cache-friendly lookups, registering Tracy zones, and binding to engine singletons. The editor invokes Awake immediately when you assign a script so inspectors can reflect freshly created fields.
+- **Start**: Fired on the first Play-mode tick after Awake completes. Use `Start()` for gameplay wiring that should only run once the world is live (spawning projectiles, scheduling timers, sending analytics events). When hot-reloading, the engine re-runs Awake and queues Start only if the behaviour did not already begin play, mirroring Unity’s semantics.
+- **Update(delta_time)**: Runs every frame while the entity is active and Play mode is engaged. Update receives the timestep from `EngineCore::Core::Application` and can call into ECS, physics, or rendering subsystems through the sol2 bindings. If Pause is pressed, Update stops; Step executes a single Update.
+- **Hot reload expectations**: `Assets/Raw/Scripts/ExampleBehaviour.lua` shows the preferred Awake/Start/Update hooks so mods can opt in gradually. When a file changes, LuaContext tears down the old chunk, rebinds serialized state, calls Awake, conditionally Start, and continues Update without requiring a restart. Future lifecycle hooks (e.g., `OnDestroy`, `OnEnable/OnDisable`) will follow the same pattern.
 
 ## Asset Pipeline Strategy
 - **Raw intake**: FBX/GLB/OBJ, PNG/TGA, WAV/FLAC, GLSL, JSON. Stored under `Assets/Raw` and referenced by metadata.
@@ -85,6 +93,26 @@ These systems live entirely in the `Editor` target; they register ImGui panels t
 - `Plugins/SplineShooter` delivers spline editor panels, gameplay components (SplinePath, RailShooterEnemy), AI behaviors, and sample Lua modules.
 - Plugin metadata declares dependencies (e.g., SplineShooter depends on EngineCore::Rendering + Physics3D). Games select plugins via manifest; editor auto-loads when opening a project.
 
+## Engine Foundations Status
+- **Rendering** (`EngineCore/Rendering`, `Assets/Shaders`): Core OpenGL scaffolding, ImGui viewport, and shader hot-reload entry points exist, but render graph abstraction and material system authoring still need validation against heavier content.
+- **Scene & ECS** (`EngineCore/Scene` + EnTT usage): Entity lifecycle is wired to the editor, yet prefab serialization, undo/redo, and scene versioning remain work-in-progress; scripting relies on consistent component schemas that are only partially enforced.
+- **Scripting** (`EngineCore/Scripting/LuaContext.cpp`, `Assets/Raw/Scripts`): LuaJIT + sol2 integration plus lifecycle hooks are in place, though API surface documentation, safety sandboxes, and coverage of engine subsystems (physics, UI) must expand before shipping mods.
+- **Physics** (`EngineCore/Physics`, `Plugins/Physics3D`): Bridges for Box2D and Jolt compile, but there is no unified authoring workflow in the editor yet (gizmos, debug draw, component inspectors).
+- **Asset pipeline & tooling** (`Tools/AssetPipeline`, `Assets/Cooked`): CLI stubs exist with watcher integration, yet automated cook graphs, dependency hashing, and error surfacing inside the editor UI remain gaps.
+- **Testing & CI** (`tests/`, `docs/CI.md`): Catch2 harness is bootstrapped, but there are few assertions around scripting, serialization, or renderer state; CI plans exist on paper but not all presets are proven.
+
+## Next Development Steps
+1. Modularize editor UX: split `EditorLayer` responsibilities into dedicated panels, add dockspace layout presets, and surface contextual shortcuts (duplicate, focus, search) to keep iteration fluid.
+2. Build an interactive scene viewport: render the runtime framebuffer inside the Scene panel using `EngineCore::Rendering`, add gizmo scaffolding, and support viewport resizing + aspect locking.
+3. Synchronize Play-in-Editor with runtime systems: drive Lua lifecycle, physics, and renderer ticks from editor play/pause/step controls so gameplay seen in the viewport matches standalone builds.
+4. Harden the scripting surface: document all sol2 bindings, add regression tests for lifecycle reloads, and expose safe wrappers for physics/rendering calls so Lua mods cannot crash the engine.
+5. Formalize scene data: implement prefab serialization + GUID stable IDs in `EngineCore/Scene`, wire undo/redo in the editor, and ensure Lua behaviours survive scene reloads without orphaned references.
+6. Expand asset pipeline automation: hook `Tools/AssetPipeline` into the editor with progress/error surfacing, add dependency hashing for shaders/models, and produce deterministic cook outputs for CI.
+7. Build physics authoring UX: create Box2D/Jolt inspectors, gizmos, and debug overlays under `Editor/` so designers can validate collision setups without custom tooling.
+8. Render architecture validation: prototype the forward+ or clustered renderer path with representative content, bake material/shader libraries, and lock down the render graph API so plugins can register passes predictably.
+9. Align editor/runtime parity: ensure Play-in-Editor matches standalone `Runtime/` by sharing launch arguments, input stacks, and save data paths; add automated smoke tests that boot both binaries with the same sample project to catch drift.
+10. Strengthen CI + perf budgets: extend `docs/CI.md` with preset coverage expectations, add GPU mock tests for shader compilation, and gate merges on Tracy capture budgets to keep frame time headroom visible.
+
 ## Vertical Slice Roadmap
 1. **Scaffold**: Build system, dependencies, Tracy instrumentation, stub renderer/runtime/editor.
 2. **Spline Tools**: Implement spline authoring UI, component types, and runtime evaluation.
@@ -100,3 +128,13 @@ These systems live entirely in the `Editor` target; they register ImGui panels t
 
 ## Licensing & Contribution
 All rights reserved (custom notice), but contribution guidelines encourage PRs under explicit agreement. Add CLA later if desired.
+
+## Implementation Notes & Open Questions
+- **Lifecycle guarantees**: Awake is called immediately when a script is assigned in the editor, and Start is queued for the first Play tick. This allows inspectors to reflect newly created fields right away.
+- **Lua sandboxing**: Initial exposure is via high-level engine wrappers only. Direct OpenGL or low-level access may be considered later if there is a strong use case.
+- **Prefab GUID scheme**: UUIDv4 is chosen for simplicity and uniqueness. While less user-friendly in diffs, it avoids collision risks in collaborative environments.
+- **Prefab serialization format**: Flat JSON is selected for its ease of iteration and diffability during development. Performance optimizations can be revisited later if load times become a bottleneck.
+- **Physics debug draw**: ImGui draw lists are used for initial implementation due to faster shipping. Performance optimizations can be explored later if necessary.
+- **Asset cook orchestration**: `cmake --build` custom targets are preferred for their integration with the existing build system. This approach will be documented in `Tools/AssetPipeline/README`.
+- **CI infrastructure**: Self-hosted runners handle GPU validation as needed. The matrix will scale based on resource availability and coverage requirements.
+- **Rendering backend roadmap**: OpenGL remains the active backend. Vulkan should be pursued only once the editor UX solidifies, ideally as a drop-in option surfaced through an engine setting so projects can toggle without code changes.
