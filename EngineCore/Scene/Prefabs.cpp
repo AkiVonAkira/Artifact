@@ -14,7 +14,9 @@ entt::entity CreateMainCamera(SceneContext& scene, const CameraPrefabOptions& op
 
     if (auto* script = scene.registry.try_get<LuaScriptComponent>(entity)) {
         script->scriptName = options.scriptName;
+        script->enabled = true;
         script->autoReloadScript = options.autoReloadScript;
+        script->serializedFields.clear();
     }
 
     return entity;
@@ -29,7 +31,9 @@ entt::entity CreateLuaActor(SceneContext& scene, const LuaActorPrefabOptions& op
 
     if (auto* script = scene.registry.try_get<LuaScriptComponent>(entity)) {
         script->scriptName = options.scriptName;
+        script->enabled = true;
         script->autoReloadScript = options.autoReloadScript;
+        script->serializedFields.clear();
     }
 
     return entity;

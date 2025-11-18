@@ -5,6 +5,8 @@
 #include <sol/sol.hpp>
 #include <spdlog/spdlog.h>
 
+#include <algorithm>
+
 namespace Artifact::Scripting {
 
 struct LuaContext::Impl {
@@ -40,6 +42,12 @@ void LuaContext::executeString(const std::string& code) {
 
 void LuaContext::enqueueReload(const std::string& moduleName) {
     ARTIFACT_ZONE();
+    if (moduleName.empty()) {
+        return;
+    }
+    if (std::find(m_reloadQueue.begin(), m_reloadQueue.end(), moduleName) != m_reloadQueue.end()) {
+        return;
+    }
     m_reloadQueue.push_back(moduleName);
 }
 
@@ -48,7 +56,12 @@ void LuaContext::pollReloads() {
     for (const auto& module : m_reloadQueue) {
         spdlog::info("Reloading module {}", module);
         const std::string command = "package.loaded['" + module + "']=nil; require('" + module + "')";
-        m_impl->state.script(command);
+        auto result = m_impl->state.safe_script(command, sol::script_pass_on_error);
+        if (!result.valid()) {
+            sol::error err = result;
+            spdlog::error("Failed to hot reload '{}': {}", module, err.what());
+            continue;
+        }
         for (auto& cb : m_callbacks) {
             cb(module);
         }

@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -12,14 +13,32 @@
 
 namespace Artifact::Editor {
 
+enum class LuaPropertyType {
+    Number,
+    Boolean,
+    String
+};
+
+struct LuaScriptPropertyDefinition {
+    std::string name;
+    LuaPropertyType type{LuaPropertyType::Number};
+    double numberDefault{0.0};
+    bool boolDefault{false};
+    std::string stringDefault{};
+    std::optional<double> minValue{};
+    std::optional<double> maxValue{};
+};
+
 struct LuaScriptAsset {
     std::string name;
     std::filesystem::path path;
+    std::vector<LuaScriptPropertyDefinition> properties;
 };
 
 using Artifact::Scene::ActiveComponent;
 using Artifact::Scene::IdComponent;
 using Artifact::Scene::LuaScriptComponent;
+using Artifact::Scene::LuaPropertyValue;
 using Artifact::Scene::NameComponent;
 using Artifact::Scene::Transform;
 using Artifact::Scene::TransformComponent;

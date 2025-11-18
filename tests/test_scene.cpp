@@ -55,7 +55,9 @@ TEST_CASE("Camera prefab applies transform and script", "[scene][prefab]") {
 
     const auto& script = registry.get<Artifact::Scene::LuaScriptComponent>(entity);
     CHECK(script.scriptName == "CameraController");
+    CHECK(script.enabled);
     CHECK_FALSE(script.autoReloadScript);
+    CHECK(script.serializedFields.empty());
 }
 
 TEST_CASE("Lua actor prefab sets script when provided", "[scene][prefab]") {
@@ -77,4 +79,6 @@ TEST_CASE("Lua actor prefab sets script when provided", "[scene][prefab]") {
     const auto& script = registry.get<Artifact::Scene::LuaScriptComponent>(entity);
     CHECK(script.scriptName == "RoamingAI");
     CHECK(script.autoReloadScript);
+    CHECK(script.enabled);
+    CHECK(script.serializedFields.empty());
 }

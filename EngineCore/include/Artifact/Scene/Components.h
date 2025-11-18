@@ -1,6 +1,8 @@
 #pragma once
 
 #include <string>
+#include <unordered_map>
+#include <variant>
 
 #include <glm/vec3.hpp>
 
@@ -28,9 +30,13 @@ struct TransformComponent {
     Transform transform{};
 };
 
+using LuaPropertyValue = std::variant<double, bool, std::string>;
+
 struct LuaScriptComponent {
     std::string scriptName{};
+    bool enabled{true};
     bool autoReloadScript{true};
+    std::unordered_map<std::string, LuaPropertyValue> serializedFields;
 };
 
 } // namespace Artifact::Scene

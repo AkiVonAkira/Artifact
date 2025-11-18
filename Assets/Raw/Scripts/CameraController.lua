@@ -1,9 +1,13 @@
+local CameraController = {
+    properties = {
+        speed = { type = "float", default = 6.0, min = 0.0, max = 64.0 },
+        verticalSpeed = { type = "float", default = 4.0, min = 0.0, max = 32.0 },
+        boostMultiplier = { type = "float", default = 2.5, min = 1.0, max = 10.0 }
+    }
+}
+
 local Input = Input or {}
 local Key = Input.Key or {}
-
-local speed = 6.0
-local verticalSpeed = 4.0
-local boostMultiplier = 2.5
 
 local function normalize(vec)
     local mag = math.sqrt(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z)
@@ -24,18 +28,30 @@ local function axis(positiveKey, negativeKey)
     return value
 end
 
-local movement = {
-    x = axis(Key.D, Key.A),
-    y = axis(Key.E, Key.Q),
-    z = axis(Key.W, Key.S)
-}
-
-if movement.x ~= 0.0 or movement.y ~= 0.0 or movement.z ~= 0.0 then
-    movement = normalize(movement)
-    local dt = Time.deltaTime or 0.0
-    local currentSpeed = speed
-    if Input.IsKeyDown(Key.LEFT_SHIFT) or Input.IsKeyDown(Key.RIGHT_SHIFT) then
-        currentSpeed = currentSpeed * boostMultiplier
-    end
-    Entity.Translate(movement.x * currentSpeed * dt, movement.y * verticalSpeed * dt, movement.z * currentSpeed * dt)
+function CameraController:awake()
+    self.movement = { x = 0.0, y = 0.0, z = 0.0 }
 end
+
+function CameraController:update(deltaTime)
+    local props = self.properties or {}
+    self.movement.x = axis(Key.D, Key.A)
+    self.movement.y = axis(Key.E, Key.Q)
+    self.movement.z = axis(Key.W, Key.S)
+
+    if self.movement.x == 0.0 and self.movement.y == 0.0 and self.movement.z == 0.0 then
+        return
+    end
+
+    self.movement = normalize(self.movement)
+    local currentSpeed = props.speed or 6.0
+    if Input.IsKeyDown(Key.LEFT_SHIFT) or Input.IsKeyDown(Key.RIGHT_SHIFT) then
+        currentSpeed = currentSpeed * (props.boostMultiplier or 2.5)
+    end
+
+    Entity.Translate(
+        self.movement.x * currentSpeed * deltaTime,
+        self.movement.y * (props.verticalSpeed or 4.0) * deltaTime,
+        self.movement.z * currentSpeed * deltaTime)
+end
+
+return CameraController

@@ -32,6 +32,11 @@ add_library(Artifact::EngineCore ALIAS artifact_engine)
 
 target_include_directories(artifact_engine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
+target_compile_definitions(artifact_engine
+    PUBLIC
+        ARTIFACT_PROJECT_ROOT="${CMAKE_SOURCE_DIR}"
+)
+
 target_link_libraries(artifact_engine
     PUBLIC
         artifact_third_party

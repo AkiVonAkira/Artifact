@@ -37,15 +37,18 @@ Application::Application(const ApplicationCreateInfo& info)
     m_overlay = std::make_unique<UI::Overlay>();
 
     if (m_assetWatcher) {
-        m_assetWatcher->watch(m_runtimeConfig.paths.rawAssets, [this](const std::filesystem::path& path) {
-            const auto ext = path.extension().string();
+        m_assetWatcher->watch(m_runtimeConfig.paths.rawAssets, [this](const Assets::AssetChange& change) {
+            const auto ext = change.path.extension().string();
             if (ext == ".lua") {
-                m_luaContext->enqueueReload(path.stem().string());
+                if (m_luaContext && change.type != Assets::AssetChange::Type::Removed) {
+                    m_luaContext->enqueueReload(change.path.stem().string());
+                }
+                notifyScriptAssetListeners(change);
             }
         });
 
-        m_assetWatcher->watch(m_runtimeConfig.paths.shaderRoot, [](const std::filesystem::path& path) {
-            spdlog::info("Shader changed: {} (queued for recompile)", path.string());
+        m_assetWatcher->watch(m_runtimeConfig.paths.shaderRoot, [](const Assets::AssetChange& change) {
+            spdlog::info("Shader changed: {} (queued for recompile)", change.path.string());
         });
     }
 }
@@ -161,6 +164,13 @@ const RuntimeConfig& Application::runtimeConfig() const {
     return m_runtimeConfig;
 }
 
+void Application::registerScriptAssetListener(ScriptAssetCallback callback) {
+    if (!callback) {
+        return;
+    }
+    m_scriptAssetCallbacks.emplace_back(std::move(callback));
+}
+
 void Application::initializeWindow() {
     ARTIFACT_ZONE();
     if (!glfwInit()) {
@@ -208,6 +218,15 @@ void Application::initializeLua() {
     m_luaContext->registerReloadCallback([](const std::string& module) {
         spdlog::info("Reloaded Lua module: {}", module);
     });
+}
+
+void Application::notifyScriptAssetListeners(const Assets::AssetChange& change) {
+    if (m_scriptAssetCallbacks.empty()) {
+        return;
+    }
+    for (auto& callback : m_scriptAssetCallbacks) {
+        callback(change);
+    }
 }
 
 void Application::pumpWatchers() {

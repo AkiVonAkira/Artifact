@@ -3,8 +3,10 @@
 #include "Artifact/Core/Config.h"
 #include "Artifact/UI/Overlay.h"
 
+#include <functional>
 #include <memory>
 #include <string>
+#include <vector>
 
 struct GLFWwindow;
 
@@ -18,6 +20,7 @@ class LuaContext;
 
 namespace Artifact::Assets {
 class AssetWatcher;
+struct AssetChange;
 }
 
 namespace Artifact::Core {
@@ -42,6 +45,8 @@ public:
     void setStatusBarCallback(UI::Overlay::PanelCallback callback);
     void resetLayout();
     bool isKeyDown(int key) const;
+    using ScriptAssetCallback = std::function<void(const Assets::AssetChange&)>;
+    void registerScriptAssetListener(ScriptAssetCallback callback);
 
     UI::Overlay* overlay();
     Scripting::LuaContext* luaContext();
@@ -52,6 +57,7 @@ private:
     void initializeWindow();
     void initializeDearImgui();
     void initializeLua();
+    void notifyScriptAssetListeners(const Assets::AssetChange& change);
     void pumpWatchers();
 
     ApplicationCreateInfo m_info{};
@@ -63,6 +69,7 @@ private:
     std::unique_ptr<Scripting::LuaContext> m_luaContext;
     std::unique_ptr<Assets::AssetWatcher> m_assetWatcher;
     std::unique_ptr<UI::Overlay> m_overlay;
+    std::vector<ScriptAssetCallback> m_scriptAssetCallbacks;
 };
 
 }

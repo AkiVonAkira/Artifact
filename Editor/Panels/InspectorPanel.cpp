@@ -4,6 +4,8 @@
 #include <imgui.h>
 #include <imgui_stdlib.h>
 #include <glm/gtc/type_ptr.hpp>
+#include <limits>
+#include <algorithm>
 
 namespace Artifact::Editor {
 namespace {
@@ -50,11 +52,74 @@ public:
                         ImGui::EndCombo();
                     }
 
+                    ImGui::Checkbox("Enabled", &script->enabled);
                     ImGui::Checkbox("Auto Reload", &script->autoReloadScript);
+
+                    const LuaScriptAsset* scriptAsset = nullptr;
                     if (!script->scriptName.empty()) {
-                        ImGui::SameLine();
-                        if (ImGui::Button("Run")) {
-                            ctx.layer.runEntityScripts(0.0f);
+                        auto assetIt = std::find_if(ctx.state.scriptAssets.begin(), ctx.state.scriptAssets.end(), [script](const LuaScriptAsset& asset) {
+                            return asset.name == script->scriptName;
+                        });
+                        if (assetIt != ctx.state.scriptAssets.end()) {
+                            scriptAsset = &(*assetIt);
+                        }
+                    }
+
+                    if (scriptAsset && !scriptAsset->properties.empty()) {
+                        ImGui::Separator();
+                        ImGui::TextUnformatted("Properties");
+                        for (const auto& property : scriptAsset->properties) {
+                            ImGui::PushID(property.name.c_str());
+                            auto fieldIt = script->serializedFields.find(property.name);
+                            auto commitChange = [&](const LuaPropertyValue& value) {
+                                script->serializedFields[property.name] = value;
+                                ctx.layer.onScriptPropertiesModified(selected);
+                            };
+
+                            switch (property.type) {
+                                case LuaPropertyType::Boolean: {
+                                    bool value = property.boolDefault;
+                                    if (fieldIt != script->serializedFields.end() && std::holds_alternative<bool>(fieldIt->second)) {
+                                        value = std::get<bool>(fieldIt->second);
+                                    }
+                                    if (ImGui::Checkbox(property.name.c_str(), &value)) {
+                                        commitChange(value);
+                                    }
+                                    break;
+                                }
+                                case LuaPropertyType::String: {
+                                    std::string value = property.stringDefault;
+                                    if (fieldIt != script->serializedFields.end() && std::holds_alternative<std::string>(fieldIt->second)) {
+                                        value = std::get<std::string>(fieldIt->second);
+                                    }
+                                    if (ImGui::InputText(property.name.c_str(), &value)) {
+                                        commitChange(value);
+                                    }
+                                    break;
+                                }
+                                case LuaPropertyType::Number:
+                                default: {
+                                    double current = property.numberDefault;
+                                    if (fieldIt != script->serializedFields.end() && std::holds_alternative<double>(fieldIt->second)) {
+                                        current = std::get<double>(fieldIt->second);
+                                    }
+                                    float value = static_cast<float>(current);
+                                    const float minValue = property.minValue ? static_cast<float>(*property.minValue) : -std::numeric_limits<float>::infinity();
+                                    const float maxValue = property.maxValue ? static_cast<float>(*property.maxValue) : std::numeric_limits<float>::infinity();
+                                    bool changed = false;
+                                    if (property.minValue && property.maxValue) {
+                                        changed = ImGui::SliderFloat(property.name.c_str(), &value, minValue, maxValue);
+                                    } else {
+                                        const float speed = 0.1f;
+                                        changed = ImGui::DragFloat(property.name.c_str(), &value, speed, minValue, maxValue);
+                                    }
+                                    if (changed) {
+                                        commitChange(static_cast<double>(value));
+                                    }
+                                    break;
+                                }
+                            }
+                            ImGui::PopID();
                         }
                     }
                 }
