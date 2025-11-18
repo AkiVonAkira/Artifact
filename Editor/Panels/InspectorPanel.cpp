@@ -16,7 +16,7 @@ public:
     void draw(PanelContext& ctx) override {
         ImGui::Begin("Inspector");
         const auto selected = ctx.layer.getSelectedEntity();
-    auto& registry = ctx.state.scene.registry;
+        auto& registry = ctx.state.scene.registry;
         if (selected != entt::null && registry.valid(selected)) {
             if (auto* active = registry.try_get<ActiveComponent>(selected)) {
                 ImGui::Checkbox("Active", &active->active);

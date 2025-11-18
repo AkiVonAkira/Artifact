@@ -13,17 +13,19 @@ LuaBindings::LuaBindings(LuaContext& context)
 
 void LuaBindings::registerInputBindings(std::function<bool(int)> keyQuery) {
     m_keyQuery = std::move(keyQuery);
-    ensureInputTable();
-
     auto& lua = m_context.state();
-    sol::table input = lua["Input"];
+    sol::table input = ensureInputTable();
     input.set_function("IsKeyDown", [this](int key) {
         return m_keyQuery ? m_keyQuery(key) : false;
     });
 
-    sol::table keyTable = input["Key"];
-    if (!keyTable.valid()) {
+    sol::object keyTableObject = input.raw_get<sol::object>("Key");
+    sol::table keyTable;
+    if (keyTableObject.valid() && keyTableObject.get_type() == sol::type::table) {
+        keyTable = keyTableObject;
+    } else {
         keyTable = lua.create_table();
+        input.raw_set("Key", keyTable);
     }
 
     keyTable["W"] = GLFW_KEY_W;
@@ -42,10 +44,7 @@ void LuaBindings::registerTimeBindings() {
 }
 
 void LuaBindings::registerEntityBindings() {
-    ensureEntityTable();
-
-    auto& lua = m_context.state();
-    sol::table entity = lua["Entity"];
+    sol::table entity = ensureEntityTable();
 
     entity.set_function("Translate", [this](float x, float y, float z) {
         if (auto* transform = getActiveTransform()) {
@@ -104,50 +103,45 @@ void LuaBindings::clearActiveEntity() {
 }
 
 void LuaBindings::updateDeltaTime(float deltaTime) {
-    ensureTimeTable();
-    auto& lua = m_context.state();
-    sol::table timeTable = lua["Time"];
-    timeTable["deltaTime"] = deltaTime;
+    sol::table timeTable = ensureTimeTable();
+    timeTable.raw_set("deltaTime", deltaTime);
 }
 
 void LuaBindings::updateEntityMetadata(const std::string& name, int id) {
-    ensureEntityTable();
-    auto& lua = m_context.state();
-    sol::table entity = lua["Entity"];
-    entity["__name"] = name;
-    entity["__id"] = id;
+    sol::table entity = ensureEntityTable();
+    entity.raw_set("__name", name);
+    entity.raw_set("__id", id);
 }
 
 void LuaBindings::clearEntityMetadata() {
-    ensureEntityTable();
-    auto& lua = m_context.state();
-    sol::table entity = lua["Entity"];
-    entity["__name"] = sol::lua_nil;
-    entity["__id"] = sol::lua_nil;
+    sol::table entity = ensureEntityTable();
+    entity.raw_set("__name", sol::lua_nil);
+    entity.raw_set("__id", sol::lua_nil);
 }
 
-void LuaBindings::ensureInputTable() {
-    auto& lua = m_context.state();
-    sol::table input = lua["Input"];
-    if (!input.valid()) {
-        lua["Input"] = lua.create_table();
-    }
+sol::table LuaBindings::ensureInputTable() {
+    return ensureTable("Input");
 }
 
-void LuaBindings::ensureEntityTable() {
-    auto& lua = m_context.state();
-    sol::table entity = lua["Entity"];
-    if (!entity.valid()) {
-        lua["Entity"] = lua.create_table();
-    }
+sol::table LuaBindings::ensureEntityTable() {
+    return ensureTable("Entity");
 }
 
-void LuaBindings::ensureTimeTable() {
+sol::table LuaBindings::ensureTimeTable() {
+    return ensureTable("Time");
+}
+
+sol::table LuaBindings::ensureTable(const char* name) {
     auto& lua = m_context.state();
-    sol::table timeTable = lua["Time"];
-    if (!timeTable.valid()) {
-        lua["Time"] = lua.create_table();
+    sol::table globals = lua.globals();
+    sol::object existing = globals.raw_get<sol::object>(name);
+    if (existing.valid() && existing.get_type() == sol::type::table) {
+        return existing;
     }
+
+    sol::table created = lua.create_table();
+    globals.raw_set(name, created);
+    return created;
 }
 
 Scene::TransformComponent* LuaBindings::getActiveTransform() {

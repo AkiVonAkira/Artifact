@@ -4,6 +4,7 @@
 #include <string>
 
 #include <entt/entt.hpp>
+#include <sol/forward.hpp>
 
 #include "Artifact/Scene/Components.h"
 
@@ -33,9 +34,10 @@ private:
     entt::registry* m_registry{nullptr};
     entt::entity m_activeEntity{entt::null};
 
-    void ensureInputTable();
-    void ensureEntityTable();
-    void ensureTimeTable();
+    sol::table ensureInputTable();
+    sol::table ensureEntityTable();
+    sol::table ensureTimeTable();
+    sol::table ensureTable(const char* name);
 
     Scene::TransformComponent* getActiveTransform();
     const Scene::NameComponent* getActiveName() const;

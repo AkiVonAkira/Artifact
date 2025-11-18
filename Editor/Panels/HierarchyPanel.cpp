@@ -26,7 +26,7 @@ public:
         }
         ImGui::Separator();
 
-    auto& registry = ctx.state.scene.registry;
+        auto& registry = ctx.state.scene.registry;
         auto view = registry.view<const IdComponent, const NameComponent>();
         std::vector<std::pair<int, entt::entity>> entries;
         entries.reserve(view.size_hint());
