@@ -3,6 +3,9 @@
 
 #include <imgui.h>
 
+#include <algorithm>
+#include <vector>
+
 namespace Artifact::Editor {
 namespace {
 class HierarchyPanel : public IEditorPanel {
@@ -14,8 +17,8 @@ public:
     void draw(PanelContext& ctx) override {
         ImGui::Begin("Hierarchy");
         if (ImGui::Button("Create Empty")) {
-            auto& entity = ctx.layer.addEntity("GameObject");
-            ctx.state.selectedEntity = entity.id;
+            const auto entity = ctx.layer.addEntity("GameObject");
+            ctx.layer.selectEntity(entity);
         }
         ImGui::SameLine();
         if (ImGui::Button("Delete")) {
@@ -23,27 +26,35 @@ public:
         }
         ImGui::Separator();
 
-        for (auto& entity : ctx.state.entities) {
+    auto& registry = ctx.state.scene.registry;
+        auto view = registry.view<const IdComponent, const NameComponent>();
+        std::vector<std::pair<int, entt::entity>> entries;
+        entries.reserve(view.size_hint());
+        for (auto entity : view) {
+            const auto& idComponent = view.get<const IdComponent>(entity);
+            entries.emplace_back(idComponent.id, entity);
+        }
+        std::sort(entries.begin(), entries.end(), [](const auto& a, const auto& b) {
+            return a.first < b.first;
+        });
+
+        const auto selected = ctx.layer.getSelectedEntity();
+        for (const auto& [id, entity] : entries) {
+            const auto& nameComponent = registry.get<const NameComponent>(entity);
             ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
-            if (ctx.state.selectedEntity == entity.id) {
+            if (selected == entity) {
                 flags |= ImGuiTreeNodeFlags_Selected;
             }
-            ImGui::TreeNodeEx(reinterpret_cast<void*>(static_cast<intptr_t>(entity.id)), flags, "%s", entity.name.c_str());
+            ImGui::TreeNodeEx(reinterpret_cast<void*>(static_cast<intptr_t>(id)), flags, "%s", nameComponent.name.c_str());
             if (ImGui::IsItemClicked()) {
-                ctx.state.selectedEntity = entity.id;
+                ctx.layer.selectEntity(entity);
             }
             if (ImGui::BeginPopupContextItem()) {
                 if (ImGui::MenuItem("Duplicate")) {
-                    auto duplicate = entity;
-                    duplicate.id = 0;
-                    duplicate.name += " Copy";
-                    auto& newEntity = ctx.layer.addEntity(duplicate.name);
-                    newEntity.transform = duplicate.transform;
-                    newEntity.scriptName = duplicate.scriptName;
-                    newEntity.autoReloadScript = duplicate.autoReloadScript;
+                    ctx.layer.duplicateEntity(entity);
                 }
                 if (ImGui::MenuItem("Delete")) {
-                    ctx.state.selectedEntity = entity.id;
+                    ctx.layer.selectEntity(entity);
                     ctx.layer.removeSelectedEntity();
                 }
                 ImGui::EndPopup();

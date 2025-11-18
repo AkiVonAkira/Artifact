@@ -41,6 +41,7 @@ public:
     void clearEditorPanels();
     void setStatusBarCallback(UI::Overlay::PanelCallback callback);
     void resetLayout();
+    bool isKeyDown(int key) const;
 
     UI::Overlay* overlay();
     Scripting::LuaContext* luaContext();

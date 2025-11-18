@@ -60,4 +60,8 @@ void LuaContext::registerReloadCallback(ReloadCallback cb) {
     m_callbacks.emplace_back(std::move(cb));
 }
 
+sol::state& LuaContext::state() {
+    return m_impl->state;
+}
+
 }

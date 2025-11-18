@@ -138,6 +138,13 @@ void Application::resetLayout() {
     }
 }
 
+bool Application::isKeyDown(int key) const {
+    if (!m_window) {
+        return false;
+    }
+    return glfwGetKey(m_window, key) == GLFW_PRESS;
+}
+
 UI::Overlay* Application::overlay() {
     return m_overlay.get();
 }

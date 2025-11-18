@@ -19,9 +19,7 @@ void DrawCreateScriptPopup(PanelContext& ctx) {
         if (ImGui::Button("Create", ImVec2(120.0f, 0.0f))) {
             const std::string trimmed = ctx.layer.trimString(ctx.state.newScriptName);
             if (ctx.layer.createLuaScript(trimmed)) {
-                if (auto* entity = ctx.layer.getSelectedEntity()) {
-                    entity->scriptName = trimmed;
-                }
+                ctx.layer.assignScriptToSelection(trimmed);
                 ctx.state.scriptCreationError.clear();
                 ctx.state.newScriptName.clear();
                 ImGui::CloseCurrentPopup();
@@ -56,12 +54,12 @@ public:
         DrawCreateScriptPopup(ctx);
 
         if (open) {
+            const auto selected = ctx.layer.getSelectedEntity();
+            auto& registry = ctx.state.scene.registry;
+            const auto* scriptComponent = (selected != entt::null && registry.valid(selected)) ? registry.try_get<LuaScriptComponent>(selected) : nullptr;
             for (const auto& asset : ctx.state.scriptAssets) {
-                bool selected = false;
-                if (auto* entity = ctx.layer.getSelectedEntity()) {
-                    selected = entity->scriptName == asset.name;
-                }
-                ImGui::Selectable(asset.name.c_str(), selected);
+                const bool selectedScript = scriptComponent && scriptComponent->scriptName == asset.name;
+                ImGui::Selectable(asset.name.c_str(), selectedScript);
                 if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
                     ctx.layer.assignScriptToSelection(asset.name);
                 }

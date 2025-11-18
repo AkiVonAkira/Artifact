@@ -6,6 +6,10 @@
 #include <string>
 #include <vector>
 
+namespace sol {
+class state;
+}
+
 namespace Artifact::Scripting {
 
 class LuaContext {
@@ -20,6 +24,7 @@ public:
     void enqueueReload(const std::string& moduleName);
     void pollReloads();
     void registerReloadCallback(ReloadCallback cb);
+    sol::state& state();
 
 private:
     struct Impl;

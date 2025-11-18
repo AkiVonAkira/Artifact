@@ -3,6 +3,7 @@
 #include "EditorState.h"
 #include "Panels/PanelFactories.h"
 #include "Artifact/Core/Config.h"
+#include "Artifact/Scripting/LuaBindings.h"
 
 #include <memory>
 
@@ -37,9 +38,11 @@ public:
 
     std::string trimString(const std::string& value) const;
 
-    EditorEntity& addEntity(const std::string& name);
+    entt::entity addEntity(const std::string& name);
+    void duplicateEntity(entt::entity entity);
     void removeSelectedEntity();
-    EditorEntity* getSelectedEntity();
+    void selectEntity(entt::entity entity);
+    entt::entity getSelectedEntity() const;
     void assignScriptToSelection(const std::string& scriptName);
 
     bool createLuaScript(const std::string& scriptName);
@@ -65,6 +68,7 @@ private:
     Rendering::Renderer* m_renderer{nullptr};
 
     EditorState m_state;
+    std::unique_ptr<Scripting::LuaBindings> m_luaBindings;
     std::vector<std::unique_ptr<IEditorPanel>> m_panels;
 };
 

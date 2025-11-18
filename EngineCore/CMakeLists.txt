@@ -4,6 +4,10 @@ set(ENGINECORE_HEADERS
     include/Artifact/Core/Instrumentation.h
     include/Artifact/Rendering/Renderer.h
     include/Artifact/Scripting/LuaContext.h
+    include/Artifact/Scripting/LuaBindings.h
+    include/Artifact/Scene/Components.h
+    include/Artifact/Scene/SceneContext.h
+    include/Artifact/Scene/Prefabs.h
     include/Artifact/Assets/AssetWatcher.h
     include/Artifact/Physics/PhysicsSystem.h
     include/Artifact/UI/Overlay.h
@@ -14,6 +18,9 @@ set(ENGINECORE_SOURCES
     Core/Config.cpp
     Rendering/Renderer.cpp
     Scripting/LuaContext.cpp
+    Scripting/LuaBindings.cpp
+    Scene/SceneContext.cpp
+    Scene/Prefabs.cpp
     Assets/AssetWatcher.cpp
     Physics/PhysicsSystem.cpp
     UI/Overlay.cpp

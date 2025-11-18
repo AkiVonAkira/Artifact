@@ -26,12 +26,13 @@ void BuildDefaultLayout(ImGuiID dockspaceID) {
     ImGuiID dockRight = ImGui::DockBuilderSplitNode(dockMainID, ImGuiDir_Right, 0.25f, nullptr, &dockMainID);
     ImGuiID dockBottom = ImGui::DockBuilderSplitNode(dockMainID, ImGuiDir_Down, 0.27f, nullptr, &dockMainID);
     ImGuiID dockLeftBottom = ImGui::DockBuilderSplitNode(dockLeft, ImGuiDir_Down, 0.5f, nullptr, &dockLeft);
+    ImGuiID dockFrameStats = ImGui::DockBuilderSplitNode(dockRight, ImGuiDir_Down, 0.12f, nullptr, &dockRight);
 
     ImGui::DockBuilderDockWindow("Hierarchy", dockLeft);
     ImGui::DockBuilderDockWindow("Assets", dockLeftBottom);
     ImGui::DockBuilderDockWindow("Scene", dockMainID);
     ImGui::DockBuilderDockWindow("Inspector", dockRight);
-    ImGui::DockBuilderDockWindow("Frame Stats", dockRight);
+    ImGui::DockBuilderDockWindow("Frame Stats", dockFrameStats);
     ImGui::DockBuilderDockWindow("Console", dockBottom);
 
     ImGui::DockBuilderFinish(dockspaceID);

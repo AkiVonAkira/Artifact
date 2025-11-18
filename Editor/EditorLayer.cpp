@@ -3,8 +3,8 @@
 #include "Artifact/Core/Application.h"
 #include "Artifact/Rendering/Renderer.h"
 #include "Artifact/Scripting/LuaContext.h"
-
-#include <GLFW/glfw3.h>
+#include "Artifact/Scene/Prefabs.h"
+#include "Artifact/Scene/SceneContext.h"
 
 #include <algorithm>
 #include <chrono>
@@ -18,8 +18,10 @@
 #include <cctype>
 
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/vec3.hpp>
 #include <imgui_stdlib.h>
 #include <spdlog/spdlog.h>
+#include <entt/entt.hpp>
 
 #include "Panels/Panel.h"
 
@@ -52,13 +54,23 @@ bool IsValidScriptName(const std::string& name) {
     }
     return true;
 }
-}
+
+} // namespace
 
 EditorLayer::EditorLayer(Artifact::Core::Application& application)
     : m_application(application) {
     m_runtimeConfig = application.runtimeConfig();
     m_luaContext = application.luaContext();
     m_renderer = application.renderer();
+    if (m_luaContext) {
+        m_luaBindings = std::make_unique<Scripting::LuaBindings>(*m_luaContext);
+        m_luaBindings->registerInputBindings([this](int key) {
+            return m_application.isKeyDown(key);
+        });
+        m_luaBindings->registerTimeBindings();
+    m_luaBindings->registerEntityBindings();
+    m_luaBindings->setRegistry(&m_state.scene.registry);
+    }
 
     refreshScriptAssets();
     createDefaultScene();
@@ -84,8 +96,8 @@ void EditorLayer::registerPanels() {
             continue;
         }
         m_application.registerEditorPanel([panelPtr = panel.get(), this]() {
-            PanelContext ctx{m_state, *this};
-            panelPtr->draw(ctx);
+            PanelContext panelCtx{m_state, *this};
+            panelPtr->draw(panelCtx);
         });
     }
 }
@@ -142,7 +154,14 @@ void EditorLayer::renderSceneViewport(const ImVec2& viewportSize) {
         return;
     }
 
+    if (m_state.playMode == PlayMode::Playing && !m_state.isPaused) {
+        const float deltaTime = ImGui::GetIO().DeltaTime;
+        m_state.sceneClock += deltaTime;
+        runEntityScripts(deltaTime);
+    }
+
     m_renderer->beginSceneViewport(static_cast<int>(viewportSize.x), static_cast<int>(viewportSize.y));
+    m_renderer->drawSkybox();
     // TODO: render actual scene content once ECS/renderer hookup exists.
     m_renderer->endSceneViewport();
 
@@ -181,28 +200,26 @@ void EditorLayer::ensureScriptsFolderExists() const {
 }
 
 void EditorLayer::createDefaultScene() {
-    m_state.entities.clear();
-    m_state.nextEntityId = 1;
-    auto& camera = addEntity("Main Camera");
-    camera.transform.position = {0.0f, 5.0f, -10.0f};
-    camera.transform.rotation = {20.0f, 0.0f, 0.0f};
+    Scene::ResetScene(m_state.scene);
+    m_state.selectedEntity = entt::null;
 
-    auto& actor = addEntity("LuaActor");
-    actor.transform.position = {0.0f, 0.0f, 0.0f};
-    if (!m_state.scriptAssets.empty()) {
-        actor.scriptName = m_state.scriptAssets.front().name;
+    Scene::Prefabs::CameraPrefabOptions cameraOptions;
+    if (findScriptByName("CameraController")) {
+        cameraOptions.scriptName = "CameraController";
     }
+    Scene::Prefabs::CreateMainCamera(m_state.scene, cameraOptions);
 
-    m_state.selectedEntity = actor.id;
+    Scene::Prefabs::LuaActorPrefabOptions actorOptions;
+    if (!m_state.scriptAssets.empty()) {
+        actorOptions.scriptName = m_state.scriptAssets.front().name;
+    }
+    const auto actor = Scene::Prefabs::CreateLuaActor(m_state.scene, actorOptions);
+
+    selectEntity(actor);
 }
 
-EditorEntity& EditorLayer::addEntity(const std::string& name) {
-    EditorEntity entity;
-    entity.id = m_state.nextEntityId++;
-    entity.name = name;
-    entity.transform.scale = {1.0f, 1.0f, 1.0f};
-    m_state.entities.emplace_back(std::move(entity));
-    return m_state.entities.back();
+entt::entity EditorLayer::addEntity(const std::string& name) {
+    return Scene::CreateEntity(m_state.scene, name);
 }
 
 bool EditorLayer::createLuaScript(const std::string& scriptName) {
@@ -244,29 +261,60 @@ std::string EditorLayer::trimString(const std::string& value) const {
     return TrimString(value);
 }
 
-void EditorLayer::removeSelectedEntity() {
-    if (m_state.selectedEntity < 0) {
+void EditorLayer::duplicateEntity(entt::entity entity) {
+    auto& registry = m_state.scene.registry;
+    if (!registry.valid(entity)) {
         return;
     }
-    const int idToRemove = m_state.selectedEntity;
-    m_state.entities.erase(std::remove_if(m_state.entities.begin(), m_state.entities.end(), [idToRemove](const EditorEntity& entity) {
-                                return entity.id == idToRemove;
-                            }),
-        m_state.entities.end());
-    m_state.selectedEntity = m_state.entities.empty() ? -1 : m_state.entities.front().id;
+    const auto& nameComponent = registry.get<NameComponent>(entity);
+    entt::entity duplicate = addEntity(nameComponent.name + " Copy");
+
+    if (auto* sourceTransform = registry.try_get<TransformComponent>(entity)) {
+        auto& destTransform = registry.get<TransformComponent>(duplicate);
+        destTransform.transform = sourceTransform->transform;
+    }
+    if (auto* sourceScript = registry.try_get<LuaScriptComponent>(entity)) {
+        auto& destScript = registry.get<LuaScriptComponent>(duplicate);
+        destScript.scriptName = sourceScript->scriptName;
+        destScript.autoReloadScript = sourceScript->autoReloadScript;
+    }
+    if (auto* sourceActive = registry.try_get<ActiveComponent>(entity)) {
+        auto& destActive = registry.get<ActiveComponent>(duplicate);
+        destActive.active = sourceActive->active;
+    }
+
+    selectEntity(duplicate);
 }
 
-EditorEntity* EditorLayer::getSelectedEntity() {
-    if (m_state.selectedEntity < 0) {
-        return nullptr;
+void EditorLayer::removeSelectedEntity() {
+    auto& registry = m_state.scene.registry;
+    if (m_state.selectedEntity != entt::null && registry.valid(m_state.selectedEntity)) {
+        registry.destroy(m_state.selectedEntity);
+        m_state.selectedEntity = entt::null;
+
+        auto view = registry.view<IdComponent>();
+        auto it = view.begin();
+        if (it != view.end()) {
+            m_state.selectedEntity = *it;
+        }
     }
-    auto it = std::find_if(m_state.entities.begin(), m_state.entities.end(), [this](const EditorEntity& entity) {
-        return entity.id == m_state.selectedEntity;
-    });
-    if (it == m_state.entities.end()) {
-        return nullptr;
+}
+
+void EditorLayer::selectEntity(entt::entity entity) {
+    auto& registry = m_state.scene.registry;
+    if (entity != entt::null && !registry.valid(entity)) {
+        m_state.selectedEntity = entt::null;
+        return;
     }
-    return &(*it);
+    m_state.selectedEntity = entity;
+}
+
+entt::entity EditorLayer::getSelectedEntity() const {
+    const auto& registry = m_state.scene.registry;
+    if (m_state.selectedEntity != entt::null && registry.valid(m_state.selectedEntity)) {
+        return m_state.selectedEntity;
+    }
+    return entt::null;
 }
 
 const LuaScriptAsset* EditorLayer::findScriptByName(const std::string& name) const {
@@ -280,9 +328,16 @@ const LuaScriptAsset* EditorLayer::findScriptByName(const std::string& name) con
 }
 
 void EditorLayer::assignScriptToSelection(const std::string& scriptName) {
-    if (auto* entity = getSelectedEntity()) {
-        entity->scriptName = scriptName;
-        pushConsoleMessage("Assigned script '" + scriptName + "' to " + entity->name, kInfoColor);
+    const auto selected = getSelectedEntity();
+    if (selected == entt::null) {
+        return;
+    }
+    auto& registry = m_state.scene.registry;
+    if (auto* script = registry.try_get<LuaScriptComponent>(selected)) {
+        script->scriptName = scriptName;
+        const auto* nameComponent = registry.try_get<NameComponent>(selected);
+        const std::string entityName = nameComponent ? nameComponent->name : "Entity";
+        pushConsoleMessage("Assigned script '" + scriptName + "' to " + entityName, kInfoColor);
     }
 }
 
@@ -334,23 +389,34 @@ void EditorLayer::stepOnce() {
 }
 
 void EditorLayer::runEntityScripts(float deltaTime) {
-    if (!m_luaContext) {
+    if (!m_luaContext || !m_luaBindings) {
         pushConsoleMessage("No Lua context available", kErrorColor);
         return;
     }
 
-    (void)deltaTime;
+    m_luaBindings->updateDeltaTime(deltaTime);
 
-    for (const auto& entity : m_state.entities) {
-        if (entity.scriptName.empty()) {
+    auto& registry = m_state.scene.registry;
+    auto view = registry.view<NameComponent, LuaScriptComponent>();
+    for (auto entity : view) {
+        auto [nameComponent, scriptComponent] = view.get<NameComponent, LuaScriptComponent>(entity);
+        if (scriptComponent.scriptName.empty()) {
             continue;
         }
-        if (const auto* asset = findScriptByName(entity.scriptName)) {
+
+        if (const auto* asset = findScriptByName(scriptComponent.scriptName)) {
+            m_luaBindings->setActiveEntity(entity);
+            int entityId = -1;
+            if (auto* idComp = registry.try_get<IdComponent>(entity)) {
+                entityId = idComp->id;
+            }
+            m_luaBindings->updateEntityMetadata(nameComponent.name, entityId);
             m_luaContext->executeFile(asset->path);
-            pushConsoleMessage("Executed script '" + entity.scriptName + "'", kInfoColor);
         } else {
-            pushConsoleMessage("Missing script '" + entity.scriptName + "'", kWarningColor);
+            pushConsoleMessage("Missing script '" + scriptComponent.scriptName + "' for " + nameComponent.name, kWarningColor);
         }
+        m_luaBindings->clearActiveEntity();
+        m_luaBindings->clearEntityMetadata();
     }
 }
 

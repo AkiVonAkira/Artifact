@@ -4,8 +4,11 @@
 #include <string>
 #include <vector>
 
-#include <glm/vec3.hpp>
+#include <entt/entt.hpp>
 #include <imgui.h>
+
+#include "Artifact/Scene/Components.h"
+#include "Artifact/Scene/SceneContext.h"
 
 namespace Artifact::Editor {
 
@@ -14,20 +17,12 @@ struct LuaScriptAsset {
     std::filesystem::path path;
 };
 
-struct Transform {
-    glm::vec3 position{0.0f, 0.0f, 0.0f};
-    glm::vec3 rotation{0.0f, 0.0f, 0.0f};
-    glm::vec3 scale{1.0f, 1.0f, 1.0f};
-};
-
-struct EditorEntity {
-    int id{0};
-    std::string name{ "GameObject" };
-    bool active{true};
-    Transform transform{};
-    std::string scriptName{};
-    bool autoReloadScript{true};
-};
+using Artifact::Scene::ActiveComponent;
+using Artifact::Scene::IdComponent;
+using Artifact::Scene::LuaScriptComponent;
+using Artifact::Scene::NameComponent;
+using Artifact::Scene::Transform;
+using Artifact::Scene::TransformComponent;
 
 struct ConsoleMessage {
     std::string text;
@@ -41,9 +36,8 @@ enum class PlayMode {
 };
 
 struct EditorState {
-    std::vector<EditorEntity> entities;
-    int selectedEntity{-1};
-    int nextEntityId{1};
+    Scene::SceneContext scene;
+    entt::entity selectedEntity{entt::null};
     std::vector<LuaScriptAsset> scriptAssets;
 
     PlayMode playMode{PlayMode::Edit};
