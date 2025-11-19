@@ -5,6 +5,7 @@
 #include <variant>
 
 #include <glm/vec3.hpp>
+#include <glm/vec4.hpp>
 #include <entt/entt.hpp>
 
 #include "Artifact/Rendering/Camera.h"
@@ -52,6 +53,16 @@ struct LuaScriptComponent {
     bool enabled{true};
     bool autoReloadScript{true};
     std::unordered_map<std::string, LuaPropertyValue> serializedFields;
+};
+
+struct MeshComponent {
+    std::string meshPath{"Assets/Models/quadPlane.obj"};
+};
+
+struct MaterialComponent {
+    glm::vec4 color{1.0f, 1.0f, 1.0f, 1.0f};
+    std::string albedoTexture{};
+    bool doubleSided{false};
 };
 
 } // namespace Artifact::Scene

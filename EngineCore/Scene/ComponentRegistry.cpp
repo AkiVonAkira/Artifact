@@ -48,6 +48,20 @@ void RegisterDefaultComponents(ComponentRegistry& registry) {
         /*allowMultiple*/ false,
         ComponentCategory::Rendering);
 
+    registry.registerComponent<MeshComponent>(
+        "Mesh",
+        /*removable*/ true,
+        /*editorVisible*/ true,
+        /*allowMultiple*/ false,
+        ComponentCategory::Rendering);
+
+    registry.registerComponent<MaterialComponent>(
+        "Material",
+        /*removable*/ true,
+        /*editorVisible*/ true,
+        /*allowMultiple*/ false,
+        ComponentCategory::Rendering);
+
     // Scripting
     registry.registerComponent<LuaScriptComponent>(
         "Lua Script",
