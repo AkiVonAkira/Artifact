@@ -22,6 +22,10 @@ entt::entity CreateEntity(SceneContext& scene, std::string_view name) {
 
     auto& transform = scene.registry.emplace<TransformComponent>(entity);
     transform.transform.scale = {1.0f, 1.0f, 1.0f};
+    transform.parent = entt::null;
+    transform.firstChild = entt::null;
+    transform.nextSibling = entt::null;
+    transform.previousSibling = entt::null;
 
     scene.registry.emplace<LuaScriptComponent>(entity);
     return entity;

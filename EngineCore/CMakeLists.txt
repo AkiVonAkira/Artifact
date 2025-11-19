@@ -3,12 +3,15 @@ set(ENGINECORE_HEADERS
     include/Artifact/Core/Config.h
     include/Artifact/Core/Instrumentation.h
     include/Artifact/Rendering/Renderer.h
+    include/Artifact/Rendering/Camera.h
+    include/Artifact/Rendering/CameraSystem.h
     include/Artifact/Scripting/LuaContext.h
     include/Artifact/Scripting/LuaBindings.h
     include/Artifact/Scene/Components.h
     include/Artifact/Scene/SceneContext.h
     include/Artifact/Scene/Prefabs.h
     include/Artifact/Scene/SceneService.h
+    include/Artifact/Scene/ComponentRegistry.h
     include/Artifact/Assets/AssetWatcher.h
     include/Artifact/Physics/PhysicsSystem.h
     include/Artifact/UI/Overlay.h
@@ -16,17 +19,21 @@ set(ENGINECORE_HEADERS
     include/Artifact/Scripting/ScriptAssetService.h
     include/Artifact/Scripting/LuaRuntimeSystem.h
     include/Artifact/Core/PlayModeController.h
+        Rendering/Renderer.h
 )
 
 set(ENGINECORE_SOURCES
     Core/Application.cpp
     Core/Config.cpp
     Rendering/Renderer.cpp
+    Rendering/Camera.cpp
+    Rendering/CameraSystem.cpp
     Scripting/LuaContext.cpp
     Scripting/LuaBindings.cpp
     Scene/SceneContext.cpp
     Scene/Prefabs.cpp
     Scene/SceneService.cpp
+    Scene/ComponentRegistry.cpp
     Assets/AssetWatcher.cpp
     Physics/PhysicsSystem.cpp
     UI/Overlay.cpp

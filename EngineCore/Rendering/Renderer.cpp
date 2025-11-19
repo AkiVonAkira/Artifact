@@ -154,6 +154,21 @@ void Renderer::drawSkybox() {
     glEnable(GL_DEPTH_TEST);
 }
 
+void Renderer::renderScene(const Scene::SceneContext& scene, Rendering::Camera* overrideCamera) {
+    ARTIFACT_ZONE();
+
+    Rendering::Camera* camera = overrideCamera;
+    if (!camera) {
+        camera = m_cameraSystem.getPrimaryCamera(const_cast<entt::registry&>(scene.registry));
+    }
+    if (!camera) {
+        drawSkybox();
+        return;
+    }
+    (void)camera;
+    drawSkybox();
+}
+
 void Renderer::initializeGlState() {
     ARTIFACT_ZONE();
     glEnable(GL_DEPTH_TEST);
@@ -236,6 +251,10 @@ void Renderer::destroySkybox() {
     }
     m_skyboxTopColorLocation = -1;
     m_skyboxHorizonColorLocation = -1;
+}
+
+Rendering::Camera* Renderer::bindRuntimeCamera(entt::registry& registry) {
+    return m_cameraSystem.getPrimaryCamera(registry);
 }
 
 }

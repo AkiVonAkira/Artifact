@@ -11,6 +11,8 @@ set(EDITOR_SOURCES
         Panels/InspectorPanel.cpp
         Panels/MainMenuPanel.cpp
         Panels/ScenePanel.cpp
+        Viewport/EditorCameraController.cpp
+        Viewport/EditorCameraController.h
 )
 
 add_executable(artifact_editor ${EDITOR_SOURCES})

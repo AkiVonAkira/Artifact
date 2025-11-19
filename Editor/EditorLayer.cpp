@@ -9,6 +9,7 @@
 #include "Artifact/Core/PlayModeController.h"
 #include "Artifact/Scripting/LuaBindings.h"
 #include "Artifact/Scene/Components.h"
+#include "Viewport/EditorCameraController.h"
 #include <imgui.h>
 #include <imgui_stdlib.h>
 #include <spdlog/spdlog.h>
@@ -78,6 +79,8 @@ EditorLayer::EditorLayer(Core::Application& application)
     m_luaRuntime = application.luaRuntime();
     m_playMode = application.playMode();
     m_luaBindings = application.luaBindings();
+
+    m_editorCamera = std::make_unique<EditorCameraController>(m_state);
 
     if (m_luaBindings) {
         m_luaBindings->registerInputBindings([this](int key) {
@@ -186,6 +189,12 @@ void EditorLayer::drawPlayControlsInMenuBar() {
 
 void EditorLayer::renderSceneViewport(const ImVec2& viewportSize) {
     m_state.sceneViewportSize = viewportSize;
+    if (m_editorCamera) {
+        m_editorCamera->setViewportSize({viewportSize.x, viewportSize.y});
+        m_editorCamera->update(ImGui::GetIO().DeltaTime,
+                               ImGui::IsWindowFocused(),
+                               ImGui::IsWindowHovered());
+    }
 
     if (!m_renderer || viewportSize.x <= 0.0f || viewportSize.y <= 0.0f) {
         ImGui::TextUnformatted("Scene viewport unavailable");
@@ -203,8 +212,13 @@ void EditorLayer::renderSceneViewport(const ImVec2& viewportSize) {
         }
     }
 
+    Rendering::Camera* camera = activeViewportCamera();
     m_renderer->beginSceneViewport(static_cast<int>(viewportSize.x), static_cast<int>(viewportSize.y));
-    m_renderer->drawSkybox();
+    if (m_sceneService) {
+        m_renderer->renderScene(m_sceneService->context(), camera);
+    } else {
+        m_renderer->drawSkybox();
+    }
     m_renderer->endSceneViewport();
 
     const uint32_t texture = m_renderer->sceneColorTexture();
@@ -312,6 +326,10 @@ void EditorLayer::enterPlayMode() {
     }
     m_playMode->play();
     m_state.sceneClock = 0.0f;
+    if (m_sceneService) {
+        auto& registry = m_sceneService->context().registry;
+        m_runtimeCamera = m_renderer ? m_renderer->bindRuntimeCamera(registry) : nullptr;
+    }
     pushConsoleMessage("Entering play mode", kInfoColor);
 }
 
@@ -321,6 +339,7 @@ void EditorLayer::stopPlayMode() {
     }
     m_playMode->stop();
     m_state.sceneClock = 0.0f;
+    m_runtimeCamera = nullptr;
     pushConsoleMessage("Exited play mode", kInfoColor);
 }
 
@@ -470,6 +489,13 @@ bool EditorLayer::createLuaScript(const std::string& scriptName) {
     m_state.scriptCreationError.clear();
     pushConsoleMessage("Created Lua script '" + scriptName + "'", kInfoColor);
     return true;
+}
+
+Rendering::Camera* EditorLayer::activeViewportCamera() {
+    if (m_playMode && m_playMode->state() == Core::PlayModeController::State::Playing && m_runtimeCamera) {
+        return m_runtimeCamera;
+    }
+    return m_editorCamera ? &m_editorCamera->camera() : nullptr;
 }
 
 }

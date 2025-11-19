@@ -29,6 +29,7 @@ public:
     entt::entity createDefaultLuaActor();
     entt::entity duplicateEntity(entt::entity source);
     void destroyEntity(entt::entity entity);
+    void setParent(entt::entity entity, entt::entity parent);
 
     void selectEntity(entt::entity entity);
     entt::entity selectedEntity() const;

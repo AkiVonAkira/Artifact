@@ -7,6 +7,7 @@
 #include "Panels/PanelFactories.h"
 #include "Artifact/Core/Config.h"
 #include "Artifact/Scene/Components.h"
+#include "Viewport/EditorCameraController.h"
 
 namespace Artifact::Core {
 class Application;
@@ -30,6 +31,7 @@ class Renderer;
 }
 
 namespace Artifact::Editor {
+class EditorCameraController;
 
 class EditorLayer {
 public:
@@ -73,6 +75,8 @@ public:
     Scripting::LuaRuntimeSystem& luaRuntime() const;
     Core::PlayModeController& playMode() const;
 
+    Rendering::Camera* activeViewportCamera();
+
 private:
     void registerPanels();
     void synchronizeSceneScripts();
@@ -92,6 +96,9 @@ private:
 
     EditorState m_state;
     std::vector<std::unique_ptr<IEditorPanel>> m_panels;
+
+    std::unique_ptr<EditorCameraController> m_editorCamera;
+    Rendering::Camera* m_runtimeCamera{nullptr};
 };
 
 }

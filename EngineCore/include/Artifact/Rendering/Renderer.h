@@ -3,6 +3,10 @@
 #include <array>
 #include <cstdint>
 
+#include "Artifact/Rendering/Camera.h"
+#include "Artifact/Rendering/CameraSystem.h"
+#include "Artifact/Scene/SceneContext.h"
+
 namespace Artifact::Rendering {
 
 struct FrameContext {
@@ -24,6 +28,9 @@ public:
     uint32_t sceneColorTexture() const;
     void drawSkybox();
 
+    void renderScene(const Scene::SceneContext& scene, Rendering::Camera* overrideCamera = nullptr);
+    Rendering::Camera* bindRuntimeCamera(entt::registry& registry);
+
 private:
     void initializeGlState();
     void initializeSkybox();
@@ -43,6 +50,8 @@ private:
     int m_skyboxHorizonColorLocation{-1};
     std::array<float, 3> m_skyboxTopColor{0.09f, 0.12f, 0.22f};
     std::array<float, 3> m_skyboxHorizonColor{0.25f, 0.32f, 0.45f};
+
+    CameraSystem m_cameraSystem{};
 };
 
 }

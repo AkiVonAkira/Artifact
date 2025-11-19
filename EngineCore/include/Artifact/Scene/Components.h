@@ -5,6 +5,9 @@
 #include <variant>
 
 #include <glm/vec3.hpp>
+#include <entt/entt.hpp>
+
+#include "Artifact/Rendering/Camera.h"
 
 namespace Artifact::Scene {
 
@@ -28,6 +31,18 @@ struct ActiveComponent {
 
 struct TransformComponent {
     Transform transform{};
+    entt::entity parent{entt::null};
+    entt::entity firstChild{entt::null};
+    entt::entity nextSibling{entt::null};
+    entt::entity previousSibling{entt::null};
+};
+
+struct CameraComponent {
+    Rendering::Camera camera{};
+    bool isPrimary{true};
+    int renderOrder{0};
+    uint32_t cullingMask{0xFFFFFFFFu};
+    bool enabled{true};
 };
 
 using LuaPropertyValue = std::variant<double, bool, std::string>;

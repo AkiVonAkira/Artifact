@@ -239,4 +239,3 @@ void LuaRuntimeSystem::applyProperties(ScriptRuntimeState& runtime,
 }
 
 } // namespace Artifact::Scripting
-

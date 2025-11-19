@@ -5,12 +5,16 @@
 #include <entt/entt.hpp>
 
 #include "Artifact/Scene/Components.h"
+#include "Artifact/Scene/ComponentRegistry.h"
 
 namespace Artifact::Scene {
 
 struct SceneContext {
     entt::registry registry;
     int nextEntityId{1};
+
+    ComponentRegistry& components() { return GetGlobalComponentRegistry(); }
+    const ComponentRegistry& components() const { return GetGlobalComponentRegistry(); }
 };
 
 void ResetScene(SceneContext& scene);

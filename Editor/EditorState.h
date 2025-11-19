@@ -5,6 +5,7 @@
 #include <vector>
 
 #include <imgui.h>
+#include <glm/glm.hpp>
 
 namespace Artifact::Editor {
 
@@ -27,6 +28,14 @@ struct EditorState {
     std::string scriptCreationError{};
 
     bool showDemoWindow{false};
+
+    struct EditorCameraState {
+        glm::vec3 position{0.0f, 5.0f, 10.0f};
+        glm::vec3 eulerDegrees{-20.0f, -35.0f, 0.0f};
+        float moveSpeed{5.0f};
+        float lookSensitivity{0.1f};
+        bool orbitMode{false};
+    } editorCamera;
 };
 
 }

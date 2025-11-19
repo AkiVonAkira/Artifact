@@ -12,12 +12,14 @@ entt::entity CreateMainCamera(SceneContext& scene, const CameraPrefabOptions& op
         transform->transform.rotation = options.rotation;
     }
 
-    if (auto* script = scene.registry.try_get<LuaScriptComponent>(entity)) {
-        script->scriptName = options.scriptName;
-        script->enabled = true;
-        script->autoReloadScript = options.autoReloadScript;
-        script->serializedFields.clear();
-    }
+    auto& cameraComp = scene.registry.emplace<CameraComponent>(entity);
+    cameraComp.isPrimary = true;
+    cameraComp.camera.setPerspective(
+        45.0f,
+        16.0f / 9.0f,
+        0.1f,
+        1000.0f
+    );
 
     return entity;
 }
