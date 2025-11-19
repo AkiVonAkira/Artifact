@@ -6,6 +6,8 @@
 #include <algorithm>
 #include <vector>
 
+#include "Artifact/Scene/SceneService.h"
+
 namespace Artifact::Editor {
 namespace {
 class HierarchyPanel : public IEditorPanel {
@@ -26,12 +28,12 @@ public:
         }
         ImGui::Separator();
 
-        auto& registry = ctx.state.scene.registry;
-        auto view = registry.view<const IdComponent, const NameComponent>();
+        auto& registry = ctx.scene.context().registry;
+        auto view = registry.view<const Scene::IdComponent, const Scene::NameComponent>();
         std::vector<std::pair<int, entt::entity>> entries;
         entries.reserve(view.size_hint());
         for (auto entity : view) {
-            const auto& idComponent = view.get<const IdComponent>(entity);
+            const auto& idComponent = view.get<const Scene::IdComponent>(entity);
             entries.emplace_back(idComponent.id, entity);
         }
         std::sort(entries.begin(), entries.end(), [](const auto& a, const auto& b) {
@@ -40,7 +42,7 @@ public:
 
         const auto selected = ctx.layer.getSelectedEntity();
         for (const auto& [id, entity] : entries) {
-            const auto& nameComponent = registry.get<const NameComponent>(entity);
+            const auto& nameComponent = registry.get<const Scene::NameComponent>(entity);
             ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
             if (selected == entity) {
                 flags |= ImGuiTreeNodeFlags_Selected;

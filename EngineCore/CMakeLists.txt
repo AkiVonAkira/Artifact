@@ -8,9 +8,14 @@ set(ENGINECORE_HEADERS
     include/Artifact/Scene/Components.h
     include/Artifact/Scene/SceneContext.h
     include/Artifact/Scene/Prefabs.h
+    include/Artifact/Scene/SceneService.h
     include/Artifact/Assets/AssetWatcher.h
     include/Artifact/Physics/PhysicsSystem.h
     include/Artifact/UI/Overlay.h
+    include/Artifact/Scripting/ScriptAsset.h
+    include/Artifact/Scripting/ScriptAssetService.h
+    include/Artifact/Scripting/LuaRuntimeSystem.h
+    include/Artifact/Core/PlayModeController.h
 )
 
 set(ENGINECORE_SOURCES
@@ -21,9 +26,13 @@ set(ENGINECORE_SOURCES
     Scripting/LuaBindings.cpp
     Scene/SceneContext.cpp
     Scene/Prefabs.cpp
+    Scene/SceneService.cpp
     Assets/AssetWatcher.cpp
     Physics/PhysicsSystem.cpp
     UI/Overlay.cpp
+    Scripting/ScriptAssetService.cpp
+    Scripting/LuaRuntimeSystem.cpp
+    Core/PlayModeController.cpp
 )
 
 add_library(artifact_engine STATIC ${ENGINECORE_HEADERS} ${ENGINECORE_SOURCES})

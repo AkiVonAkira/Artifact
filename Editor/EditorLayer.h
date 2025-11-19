@@ -1,25 +1,28 @@
 #pragma once
 
+#include <entt/entity/entity.hpp>
+
 #include "EditorState.h"
+#include "Artifact/Assets/AssetWatcher.h"
 #include "Panels/PanelFactories.h"
 #include "Artifact/Core/Config.h"
-#include "Artifact/Scripting/LuaBindings.h"
-
-#include <memory>
-#include <unordered_map>
-
-#include <sol/sol.hpp>
+#include "Artifact/Scene/Components.h"
 
 namespace Artifact::Core {
 class Application;
-}
-
-namespace Artifact::Assets {
-struct AssetChange;
+class PlayModeController;
 }
 
 namespace Artifact::Scripting {
 class LuaContext;
+class LuaRuntimeSystem;
+class ScriptAssetService;
+class LuaBindings;
+struct ScriptAsset;
+}
+
+namespace Artifact::Scene {
+class SceneService;
 }
 
 namespace Artifact::Rendering {
@@ -61,48 +64,34 @@ public:
     void enterPlayMode();
     void stopPlayMode();
     void stepOnce();
-    void runEntityScripts(float deltaTime);
 
     void requestExit();
     void resetLayout();
 
+    Scene::SceneService& sceneService() const;
+    Scripting::ScriptAssetService& scriptAssets() const;
+    Scripting::LuaRuntimeSystem& luaRuntime() const;
+    Core::PlayModeController& playMode() const;
+
 private:
     void registerPanels();
-    void ensureScriptsFolderExists() const;
-    const LuaScriptAsset* findScriptByName(const std::string& name) const;
-    std::vector<LuaScriptPropertyDefinition> parseScriptProperties(const std::filesystem::path& path) const;
-    void synchronizeScriptFields(LuaScriptComponent& component, const LuaScriptAsset& asset) const;
-    void initializeScriptComponent(entt::entity entity);
+    void synchronizeSceneScripts();
     void handleScriptAssetChange(const Assets::AssetChange& change);
-    void destroyRuntime(entt::entity entity);
-    struct ScriptRuntimeState {
-        std::string scriptName;
-        sol::environment environment;
-        sol::table definition;
-        sol::table instance;
-        sol::table properties;
-        sol::protected_function awake;
-        sol::protected_function start;
-        sol::protected_function update;
-        sol::protected_function onEnable;
-        sol::protected_function onDisable;
-        bool awakeCalled{false};
-        bool startCalled{false};
-        bool enabledLastFrame{false};
-    };
-    ScriptRuntimeState* findRuntime(entt::entity entity);
-    ScriptRuntimeState* getOrCreateRuntime(entt::entity entity, LuaScriptComponent& component);
-    void applyPropertiesToRuntime(ScriptRuntimeState& runtime, const LuaScriptComponent& component, const LuaScriptAsset& asset);
+    const Scripting::ScriptAsset* findScriptByName(const std::string& name) const;
+    void synchronizeScriptFields(Scene::LuaScriptComponent& component, const Scripting::ScriptAsset& asset) const;
 
     Core::Application& m_application;
     Core::RuntimeConfig m_runtimeConfig{};
     Scripting::LuaContext* m_luaContext{nullptr};
     Rendering::Renderer* m_renderer{nullptr};
+    Scene::SceneService* m_sceneService{nullptr};
+    Scripting::ScriptAssetService* m_scriptAssets{nullptr};
+    Scripting::LuaRuntimeSystem* m_luaRuntime{nullptr};
+    Core::PlayModeController* m_playMode{nullptr};
+    Scripting::LuaBindings* m_luaBindings{nullptr};
 
     EditorState m_state;
-    std::unique_ptr<Scripting::LuaBindings> m_luaBindings;
     std::vector<std::unique_ptr<IEditorPanel>> m_panels;
-    std::unordered_map<entt::entity, ScriptRuntimeState> m_scriptRuntimes;
 };
 
 }

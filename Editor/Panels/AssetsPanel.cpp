@@ -4,6 +4,9 @@
 #include <imgui.h>
 #include <imgui_stdlib.h>
 
+#include "Artifact/Scene/SceneService.h"
+#include "Artifact/Scripting/ScriptAssetService.h"
+
 namespace Artifact::Editor {
 namespace {
 
@@ -55,9 +58,9 @@ public:
 
         if (open) {
             const auto selected = ctx.layer.getSelectedEntity();
-            auto& registry = ctx.state.scene.registry;
-            const auto* scriptComponent = (selected != entt::null && registry.valid(selected)) ? registry.try_get<LuaScriptComponent>(selected) : nullptr;
-            for (const auto& asset : ctx.state.scriptAssets) {
+            auto& registry = ctx.scene.context().registry;
+            const auto* scriptComponent = (selected != entt::null && registry.valid(selected)) ? registry.try_get<Scene::LuaScriptComponent>(selected) : nullptr;
+            for (const auto& asset : ctx.scripts.scripts()) {
                 const bool selectedScript = scriptComponent && scriptComponent->scriptName == asset.name;
                 ImGui::Selectable(asset.name.c_str(), selectedScript);
                 if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {

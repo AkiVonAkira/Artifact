@@ -7,6 +7,9 @@
 #include <limits>
 #include <algorithm>
 
+#include "Artifact/Scene/SceneService.h"
+#include "Artifact/Scripting/ScriptAssetService.h"
+
 namespace Artifact::Editor {
 namespace {
 class InspectorPanel : public IEditorPanel {
@@ -18,16 +21,16 @@ public:
     void draw(PanelContext& ctx) override {
         ImGui::Begin("Inspector");
         const auto selected = ctx.layer.getSelectedEntity();
-        auto& registry = ctx.state.scene.registry;
+        auto& registry = ctx.scene.context().registry;
         if (selected != entt::null && registry.valid(selected)) {
-            if (auto* active = registry.try_get<ActiveComponent>(selected)) {
+            if (auto* active = registry.try_get<Scene::ActiveComponent>(selected)) {
                 ImGui::Checkbox("Active", &active->active);
             }
-            if (auto* name = registry.try_get<NameComponent>(selected)) {
+            if (auto* name = registry.try_get<Scene::NameComponent>(selected)) {
                 ImGui::InputText("Name", &name->name);
             }
 
-            if (auto* transform = registry.try_get<TransformComponent>(selected)) {
+            if (auto* transform = registry.try_get<Scene::TransformComponent>(selected)) {
                 if (ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen)) {
                     ImGui::DragFloat3("Position", glm::value_ptr(transform->transform.position), 0.1f);
                     ImGui::DragFloat3("Rotation", glm::value_ptr(transform->transform.rotation), 0.5f);
@@ -35,7 +38,7 @@ public:
                 }
             }
 
-            if (auto* script = registry.try_get<LuaScriptComponent>(selected)) {
+            if (auto* script = registry.try_get<Scene::LuaScriptComponent>(selected)) {
                 if (ImGui::CollapsingHeader("Lua Script", ImGuiTreeNodeFlags_DefaultOpen)) {
                     const char* current = script->scriptName.empty() ? "None" : script->scriptName.c_str();
                     if (ImGui::BeginCombo("Script", current)) {
@@ -43,10 +46,10 @@ public:
                         if (ImGui::Selectable("None", selectedScript)) {
                             script->scriptName.clear();
                         }
-                        for (const auto& asset : ctx.state.scriptAssets) {
+                        for (const auto& asset : ctx.scripts.scripts()) {
                             selectedScript = script->scriptName == asset.name;
                             if (ImGui::Selectable(asset.name.c_str(), selectedScript)) {
-                                script->scriptName = asset.name;
+                                ctx.layer.assignScriptToSelection(asset.name);
                             }
                         }
                         ImGui::EndCombo();
@@ -55,15 +58,7 @@ public:
                     ImGui::Checkbox("Enabled", &script->enabled);
                     ImGui::Checkbox("Auto Reload", &script->autoReloadScript);
 
-                    const LuaScriptAsset* scriptAsset = nullptr;
-                    if (!script->scriptName.empty()) {
-                        auto assetIt = std::find_if(ctx.state.scriptAssets.begin(), ctx.state.scriptAssets.end(), [script](const LuaScriptAsset& asset) {
-                            return asset.name == script->scriptName;
-                        });
-                        if (assetIt != ctx.state.scriptAssets.end()) {
-                            scriptAsset = &(*assetIt);
-                        }
-                    }
+                    const auto* scriptAsset = ctx.scripts.findByName(script->scriptName);
 
                     if (scriptAsset && !scriptAsset->properties.empty()) {
                         ImGui::Separator();
@@ -71,13 +66,13 @@ public:
                         for (const auto& property : scriptAsset->properties) {
                             ImGui::PushID(property.name.c_str());
                             auto fieldIt = script->serializedFields.find(property.name);
-                            auto commitChange = [&](const LuaPropertyValue& value) {
+                            auto commitChange = [&](const Scene::LuaPropertyValue& value) {
                                 script->serializedFields[property.name] = value;
                                 ctx.layer.onScriptPropertiesModified(selected);
                             };
 
                             switch (property.type) {
-                                case LuaPropertyType::Boolean: {
+                                case Scripting::ScriptPropertyType::Boolean: {
                                     bool value = property.boolDefault;
                                     if (fieldIt != script->serializedFields.end() && std::holds_alternative<bool>(fieldIt->second)) {
                                         value = std::get<bool>(fieldIt->second);
@@ -87,7 +82,7 @@ public:
                                     }
                                     break;
                                 }
-                                case LuaPropertyType::String: {
+                                case Scripting::ScriptPropertyType::String: {
                                     std::string value = property.stringDefault;
                                     if (fieldIt != script->serializedFields.end() && std::holds_alternative<std::string>(fieldIt->second)) {
                                         value = std::get<std::string>(fieldIt->second);
@@ -97,7 +92,7 @@ public:
                                     }
                                     break;
                                 }
-                                case LuaPropertyType::Number:
+                                case Scripting::ScriptPropertyType::Number:
                                 default: {
                                     double current = property.numberDefault;
                                     if (fieldIt != script->serializedFields.end() && std::holds_alternative<double>(fieldIt->second)) {

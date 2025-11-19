@@ -35,6 +35,13 @@ Application::Application(const ApplicationCreateInfo& info)
     m_renderer = std::make_unique<Rendering::Renderer>();
     m_assetWatcher = std::make_unique<Assets::AssetWatcher>();
     m_overlay = std::make_unique<UI::Overlay>();
+    m_sceneService = std::make_unique<Scene::SceneService>();
+    m_scriptAssets = std::make_unique<Scripting::ScriptAssetService>(m_runtimeConfig, *m_luaContext);
+    m_scriptAssets->refresh(true);
+    m_sceneService->createDefaultScene(m_scriptAssets.get());
+    m_playModeController = std::make_unique<PlayModeController>();
+    m_luaBindings = std::make_unique<Scripting::LuaBindings>(*m_luaContext);
+    m_luaRuntime = std::make_unique<Scripting::LuaRuntimeSystem>(*m_luaContext, *m_scriptAssets, *m_luaBindings);
 
     if (m_assetWatcher) {
         m_assetWatcher->watch(m_runtimeConfig.paths.rawAssets, [this](const Assets::AssetChange& change) {
@@ -156,8 +163,28 @@ Scripting::LuaContext* Application::luaContext() {
     return m_luaContext.get();
 }
 
-Rendering::Renderer* Application::renderer() {
-    return m_renderer.get();
+Scene::SceneService* Application::sceneService() {
+    return m_sceneService.get();
+}
+
+Scripting::ScriptAssetService* Application::scriptAssets() {
+    return m_scriptAssets.get();
+}
+
+Scripting::LuaRuntimeSystem* Application::luaRuntime() {
+    return m_luaRuntime.get();
+}
+
+PlayModeController* Application::playMode() {
+    return m_playModeController.get();
+}
+
+Scripting::LuaBindings* Application::luaBindings() {
+    return m_luaBindings.get();
+}
+
+const Scripting::LuaBindings* Application::luaBindings() const {
+    return m_luaBindings.get();
 }
 
 const RuntimeConfig& Application::runtimeConfig() const {
@@ -234,6 +261,14 @@ void Application::pumpWatchers() {
     if (m_assetWatcher) {
         m_assetWatcher->pump();
     }
+}
+
+Rendering::Renderer* Application::renderer() {
+    return m_renderer.get();
+}
+
+const Rendering::Renderer* Application::renderer() const {
+    return m_renderer.get();
 }
 
 }

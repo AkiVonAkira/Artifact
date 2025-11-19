@@ -2,6 +2,11 @@
 
 #include "Artifact/Core/Config.h"
 #include "Artifact/UI/Overlay.h"
+#include "Artifact/Scene/SceneService.h"
+#include "Artifact/Scripting/ScriptAssetService.h"
+#include "Artifact/Scripting/LuaRuntimeSystem.h"
+#include "Artifact/Scripting/LuaBindings.h"
+#include "Artifact/Core/PlayModeController.h"
 
 #include <functional>
 #include <memory>
@@ -51,7 +56,14 @@ public:
     UI::Overlay* overlay();
     Scripting::LuaContext* luaContext();
     Rendering::Renderer* renderer();
+    const Rendering::Renderer* renderer() const;
     const RuntimeConfig& runtimeConfig() const;
+    Scene::SceneService* sceneService();
+    Scripting::ScriptAssetService* scriptAssets();
+    Scripting::LuaRuntimeSystem* luaRuntime();
+    PlayModeController* playMode();
+    Scripting::LuaBindings* luaBindings();
+    const Scripting::LuaBindings* luaBindings() const;
 
 private:
     void initializeWindow();
@@ -70,6 +82,11 @@ private:
     std::unique_ptr<Assets::AssetWatcher> m_assetWatcher;
     std::unique_ptr<UI::Overlay> m_overlay;
     std::vector<ScriptAssetCallback> m_scriptAssetCallbacks;
+    std::unique_ptr<Scene::SceneService> m_sceneService;
+    std::unique_ptr<Scripting::ScriptAssetService> m_scriptAssets;
+    std::unique_ptr<Scripting::LuaRuntimeSystem> m_luaRuntime;
+    std::unique_ptr<PlayModeController> m_playModeController;
+    std::unique_ptr<Scripting::LuaBindings> m_luaBindings;
 };
 
 }
