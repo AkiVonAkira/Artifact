@@ -49,6 +49,16 @@ public:
                 }
                 ImGui::EndMenu();
             }
+
+            for (const auto& descriptor : layer.panelDescriptors()) {
+                if (!descriptor.visibleInWindowMenu) {
+                    continue;
+                }
+                if (ImGui::MenuItem(descriptor.label.c_str())) {
+                    layer.openPanel(descriptor.id);
+                }
+            }
+
             ImGui::MenuItem("ImGui Demo", nullptr, &state.showDemoWindow);
             ImGui::EndMenu();
         }

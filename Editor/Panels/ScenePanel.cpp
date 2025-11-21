@@ -12,7 +12,11 @@ public:
     }
 
     void draw(PanelContext& ctx) override {
-        ImGui::Begin("Scene");
+        const char* title = ctx.windowTitle ? ctx.windowTitle : "Scene";
+        if (!ImGui::Begin(title, ctx.closeable ? ctx.openFlag : nullptr)) {
+            ImGui::End();
+            return;
+        }
         const ImVec2 viewportSize = ImGui::GetContentRegionAvail();
         ctx.layer.renderSceneViewport(viewportSize);
         ImGui::End();

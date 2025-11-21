@@ -9,4 +9,5 @@ namespace Artifact::Editor {
     PanelPtr CreateScenePanel();
     PanelPtr CreateConsolePanel();
     PanelPtr CreateAssetsPanel();
+    PanelPtr CreateTestRunnerPanel();
 }

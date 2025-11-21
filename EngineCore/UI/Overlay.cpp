@@ -110,6 +110,28 @@ void Overlay::drawPanels() {
             callback();
         }
     }
+
+    for (auto& descriptor : m_descriptors) {
+        if (!descriptor.draw) {
+            continue;
+        }
+        if (!descriptor.hasWindow) {
+            descriptor.draw();
+            continue;
+        }
+        bool open = !descriptor.openFlag || *descriptor.openFlag;
+        if (!descriptor.closeable) {
+            open = true;
+        }
+        if (descriptor.allowMultiple || descriptor.openFlag || open) {
+            const char* windowLabel = descriptor.label.c_str();
+            bool* openPtr = descriptor.closeable ? descriptor.openFlag : nullptr;
+            if (ImGui::Begin(windowLabel, openPtr)) {
+                descriptor.draw();
+            }
+            ImGui::End();
+        }
+    }
 }
 
 void Overlay::registerPanel(PanelCallback callback) {
@@ -126,6 +148,10 @@ void Overlay::setStatusBarCallback(PanelCallback callback) {
 
 void Overlay::requestDefaultLayout() {
     m_forceDefaultLayout = true;
+}
+
+void Overlay::setPanelDescriptors(std::vector<OverlayPanelDescriptor> descriptors) {
+    m_descriptors = std::move(descriptors);
 }
 
 }

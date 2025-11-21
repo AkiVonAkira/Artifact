@@ -8,6 +8,8 @@
 #include "Artifact/Core/Config.h"
 #include "Artifact/Scene/Components.h"
 #include "Viewport/EditorCameraController.h"
+#include "Panels/PanelRegistry.h"
+#include "Panels/PanelInstances.h"
 
 namespace Artifact::Core {
 class Application;
@@ -76,9 +78,12 @@ public:
     Core::PlayModeController& playMode() const;
 
     Rendering::Camera* activeViewportCamera();
+    const std::vector<PanelDescriptor>& panelDescriptors() const;
+    void openPanel(const std::string& id, bool forceNewInstance = false);
 
 private:
     void registerPanels();
+    void rebuildPanelDescriptors();
     void synchronizeSceneScripts();
     void handleScriptAssetChange(const Assets::AssetChange& change);
     const Scripting::ScriptAsset* findScriptByName(const std::string& name) const;
@@ -95,10 +100,10 @@ private:
     Scripting::LuaBindings* m_luaBindings{nullptr};
 
     EditorState m_state;
-    std::vector<std::unique_ptr<IEditorPanel>> m_panels;
 
     std::unique_ptr<EditorCameraController> m_editorCamera;
     Rendering::Camera* m_runtimeCamera{nullptr};
+    PanelManager m_panelManager;
 };
 
 }

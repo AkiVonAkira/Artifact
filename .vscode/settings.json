@@ -1,15 +1,32 @@
 {
-    "cmake.defaultConfigurePreset": "editor-debug",
-    "cmake.defaultBuildPreset": "build-editor-debug",
-    "cmake.defaultTestPreset": "test-editor",
-    "cmake.defaultLaunchTarget": "artifact_editor",
-    "cmake.runBuildBeforeLaunch": true,
-    "cmake.configureOnOpen": true,
-    "cmake.debugConfig": {
-        "stopAtEntry": false,
-        "console": "integratedTerminal"
-    },
-    "files.associations": {
-        "xstring": "cpp"
+  "cmake.configureOnOpen": true,
+  "cmake.useCMakePresets": "always",
+  "cmake.buildDirectory": "${workspaceFolder}/build/${hostSystemName}/${presetName}",
+  "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+  "C_Cpp.default.cppStandard": "c++23",
+  "C_Cpp.default.intelliSenseMode": "windows-msvc-x64",
+  "C_Cpp.errorSquiggles": "enabled",
+  "files.associations": {
+    "*.h": "cpp",
+    "*.cpp": "cpp",
+    "*.tpp": "cpp"
+  },
+  "cmake.options.statusBarVisibility": "visible",
+  "cmake.options.advanced": {
+    "build": {
+      "statusBarVisibility": "visible"
     }
+  },
+  "editor.formatOnSave": false,
+  "files.exclude": {
+    "**/.git": true,
+    "**/.svn": true,
+    "**/.hg": true,
+    "**/CVS": true,
+    "**/.DS_Store": true,
+    "**/build": true,
+    "**/.vs": true,
+    "**/.cmake": true
+  }
 }
+

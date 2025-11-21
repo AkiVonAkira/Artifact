@@ -45,7 +45,12 @@ public:
     }
 
     void draw(PanelContext& ctx) override {
-        ImGui::Begin("Assets");
+        const char* title = ctx.windowTitle ? ctx.windowTitle : "Assets";
+        if (!ImGui::Begin(title, ctx.closeable ? ctx.openFlag : nullptr)) {
+            ImGui::End();
+            return;
+        }
+
         const float buttonSize = ImGui::GetFrameHeight();
         bool open = ImGui::TreeNodeEx("Lua Scripts", ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_SpanAvailWidth);
         ImGui::SameLine(ImGui::GetWindowContentRegionMax().x - buttonSize);

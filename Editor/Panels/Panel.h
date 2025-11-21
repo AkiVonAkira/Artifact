@@ -21,6 +21,11 @@ struct PanelContext {
     Scripting::ScriptAssetService& scripts;
     Scripting::LuaRuntimeSystem& luaRuntime;
     Core::PlayModeController& playMode;
+    const char* windowTitle = nullptr;
+    const char* windowId = nullptr;
+    bool* openFlag = nullptr;
+    bool hasWindow = true;
+    bool closeable = true;
 };
 
 class IEditorPanel {

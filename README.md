@@ -12,6 +12,7 @@ Artifact is a cross-platform OpenGL 3.3+ engine/editor pairing focused on high i
 ### Quick Links
 - 🎯 **[docs/EXECUTIVE_SUMMARY.md](docs/EXECUTIVE_SUMMARY.md)** - **START HERE** (High-level overview)
 - 🚀 **[docs/QUICK_START_CAMERA.md](docs/QUICK_START_CAMERA.md)** - Week 1 implementation guide
+- 🛠️ **[docs/IDE_SETUP.md](docs/IDE_SETUP.md)** - **IDE Setup Guide** (CLion, VS, VS Code)
 - 📖 **[docs/README.md](docs/README.md)** - Full documentation index
 
 ### All Documents

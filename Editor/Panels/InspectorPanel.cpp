@@ -95,7 +95,11 @@ public:
     }
 
     void draw(PanelContext& ctx) override {
-        ImGui::Begin("Inspector");
+        const char* title = ctx.windowTitle ? ctx.windowTitle : "Inspector";
+        if (!ImGui::Begin(title, ctx.closeable ? ctx.openFlag : nullptr)) {
+            ImGui::End();
+            return;
+        }
         const auto selected = ctx.layer.getSelectedEntity();
         auto& registry = ctx.scene.context().registry;
         auto& componentRegistry = ctx.scene.context().components();

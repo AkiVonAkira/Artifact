@@ -21,6 +21,7 @@ set(ENGINECORE_HEADERS
     include/Artifact/Scripting/LuaRuntimeSystem.h
     include/Artifact/Scripting/ScriptAssetService.h
     include/Artifact/UI/Overlay.h
+    include/Artifact/Core/GameplayTest.h
 )
 
 set(ENGINECORE_SOURCES
@@ -43,6 +44,7 @@ set(ENGINECORE_SOURCES
     Scripting/LuaRuntimeSystem.cpp
     Scripting/ScriptAssetService.cpp
     UI/Overlay.cpp
+    Core/GameplayTestRegistry.cpp
 )
 
 add_library(artifact_engine STATIC ${ENGINECORE_HEADERS} ${ENGINECORE_SOURCES})

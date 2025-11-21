@@ -19,7 +19,9 @@
 #include <unordered_map>
 #include <cctype>
 
-#include "Panels/Panel.h"
+#include "Panels/PanelRegistry.h"
+#include "Panels/PanelInstances.h"
+#include "Artifact/UI/Overlay.h"
 
 namespace Artifact::Editor {
 
@@ -107,22 +109,86 @@ EditorLayer::EditorLayer(Core::Application& application)
 }
 
 void EditorLayer::registerPanels() {
-    PanelContext ctx{m_state, *this, *m_sceneService, *m_scriptAssets, *m_luaRuntime, *m_playMode};
-    m_panels.emplace_back(CreateMainMenuPanel());
-    m_panels.emplace_back(CreateHierarchyPanel());
-    m_panels.emplace_back(CreateInspectorPanel());
-    m_panels.emplace_back(CreateScenePanel());
-    m_panels.emplace_back(CreateConsolePanel());
-    m_panels.emplace_back(CreateAssetsPanel());
-
-    for (auto& panel : m_panels) {
-        if (!panel) {
+    m_panelManager.removeClosedInstances();
+    const auto& registry = GetPanelRegistry();
+    for (const auto& descriptor : registry) {
+        if (!descriptor.defaultOpen) {
             continue;
         }
-        m_application.registerEditorPanel([panelPtr = panel.get(), this]() {
-            PanelContext panelCtx{m_state, *this, *m_sceneService, *m_scriptAssets, *m_luaRuntime, *m_playMode};
-            panelPtr->draw(panelCtx);
-        });
+        bool exists = false;
+        for (const auto& instancePtr : m_panelManager.instances()) {
+            if (instancePtr && instancePtr->descriptor == &descriptor) {
+                exists = true;
+                break;
+            }
+        }
+        if (!exists) {
+            m_panelManager.createInstance(descriptor);
+        }
+    }
+    rebuildPanelDescriptors();
+}
+
+void EditorLayer::rebuildPanelDescriptors() {
+    auto* overlay = m_application.overlay();
+    if (!overlay) {
+        return;
+    }
+
+    m_panelManager.removeClosedInstances();
+
+    std::vector<UI::OverlayPanelDescriptor> overlayDescriptors;
+    auto& instances = m_panelManager.instances();
+    for (auto& instancePtr : instances) {
+        PanelInstance* panelInstance = instancePtr.get();
+        if (!panelInstance || !panelInstance->panel) {
+            continue;
+        }
+        const auto* descriptor = panelInstance->descriptor;
+        bool* openFlag = descriptor && descriptor->closeable ? &panelInstance->open : nullptr;
+        UI::OverlayPanelDescriptor descriptorEntry{};
+        descriptorEntry.id = panelInstance->instanceId;
+        descriptorEntry.label = descriptor ? descriptor->label : panelInstance->instanceId;
+        descriptorEntry.allowMultiple = descriptor ? descriptor->allowMultiple : true;
+        descriptorEntry.hasWindow = descriptor ? descriptor->hasWindow : true;
+        descriptorEntry.closeable = descriptor ? descriptor->closeable : true;
+        descriptorEntry.openFlag = openFlag;
+        descriptorEntry.draw = [panelInstance, descriptor, openFlag, this]() {
+            PanelContext ctx{m_state, *this, *m_sceneService, *m_scriptAssets, *m_luaRuntime, *m_playMode};
+            ctx.windowTitle = descriptor ? descriptor->label.c_str() : panelInstance->instanceId.c_str();
+            ctx.windowId = panelInstance->instanceId.c_str();
+            ctx.openFlag = openFlag;
+            ctx.hasWindow = descriptor ? descriptor->hasWindow : true;
+            ctx.closeable = descriptor ? descriptor->closeable : true;
+            panelInstance->panel->draw(ctx);
+        };
+        overlayDescriptors.push_back(std::move(descriptorEntry));
+    }
+    overlay->setPanelDescriptors(std::move(overlayDescriptors));
+}
+
+const std::vector<PanelDescriptor>& EditorLayer::panelDescriptors() const {
+    return GetPanelRegistry();
+}
+
+void EditorLayer::openPanel(const std::string& id, bool forceNewInstance) {
+    const auto* descriptor = FindPanelDescriptor(id);
+    if (!descriptor) {
+        return;
+    }
+    if (!descriptor->allowMultiple && !forceNewInstance) {
+        auto& instances = m_panelManager.instances();
+        for (auto& instancePtr : instances) {
+            PanelInstance* panelInstance = instancePtr.get();
+            if (panelInstance && panelInstance->descriptor == descriptor) {
+                panelInstance->open = true;
+                rebuildPanelDescriptors();
+                return;
+            }
+        }
+    }
+    if (m_panelManager.createInstance(*descriptor)) {
+        rebuildPanelDescriptors();
     }
 }
 

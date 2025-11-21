@@ -66,7 +66,11 @@ public:
     }
 
     void draw(PanelContext& ctx) override {
-        ImGui::Begin("Hierarchy");
+        const char* title = ctx.windowTitle ? ctx.windowTitle : "Hierarchy";
+        if (!ImGui::Begin(title, ctx.closeable ? ctx.openFlag : nullptr)) {
+            ImGui::End();
+            return;
+        }
         const ImRect dropRect = ImGui::GetCurrentWindow()->InnerRect;
         if (ImGui::BeginDragDropTargetCustom(dropRect, ImGui::GetID("HierarchyWindowDropTarget"))) {
             if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(kHierarchyPayload)) {

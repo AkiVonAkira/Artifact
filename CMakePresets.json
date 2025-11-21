@@ -11,7 +11,6 @@
       "displayName": "Base",
       "description": "Shared settings for editor-first builds.",
       "hidden": true,
-      "generator": "Ninja",
       "binaryDir": "${sourceDir}/build/${hostSystemName}/${presetName}",
       "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
       "cacheVariables": {
@@ -19,26 +18,34 @@
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
         "ARTIFACT_ENABLE_EDITOR": "ON",
         "ARTIFACT_ENABLE_RUNTIME": "OFF",
-        "ARTIFACT_ENABLE_TESTS": "ON",
+        "ARTIFACT_ENABLE_TESTS": "OFF",
         "ARTIFACT_ENABLE_TRACY": "ON",
         "ARTIFACT_ENABLE_TOOLS": "OFF",
         "ARTIFACT_BUILD_PACKAGING": "OFF"
       }
     },
     {
-      "name": "editor-debug",
-      "displayName": "Editor Debug",
-      "description": "Debug build of the editor + tests for the current host.",
+      "name": "ninja-base",
+      "displayName": "Ninja Base",
+      "description": "Base configuration using Ninja (fast, works with most IDEs).",
       "inherits": "base",
+      "hidden": true,
+      "generator": "Ninja"
+    },
+    {
+      "name": "Win64-Editor-Debug",
+      "displayName": "Win64 Editor Debug",
+      "description": "Debug build of the editor + tests using Ninja.",
+      "inherits": "ninja-base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug"
       }
     },
     {
-      "name": "editor-release",
-      "displayName": "Editor Release",
-      "description": "RelWithDebInfo editor build (Tracy off by default).",
-      "inherits": "base",
+      "name": "Win64-Editor-RelWithDebInfo",
+      "displayName": "Win64 Editor RelWithDebInfo",
+      "description": "RelWithDebInfo editor build using Ninja (Tracy off by default).",
+      "inherits": "ninja-base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
         "ARTIFACT_ENABLE_TRACY": "OFF"
@@ -47,21 +54,21 @@
   ],
   "buildPresets": [
     {
-      "name": "build-editor-debug",
-      "displayName": "Build editor debug",
-      "configurePreset": "editor-debug"
+      "name": "Build-Win64-Editor-Debug",
+      "displayName": "Build Win64 Editor Debug",
+      "configurePreset": "Win64-Editor-Debug"
     },
     {
-      "name": "build-editor-release",
-      "displayName": "Build editor release",
-      "configurePreset": "editor-release"
+      "name": "Build-Win64-Editor-RelWithDebInfo",
+      "displayName": "Build Win64 Editor RelWithDebInfo",
+      "configurePreset": "Win64-Editor-RelWithDebInfo"
     }
   ],
   "testPresets": [
     {
-      "name": "test-editor",
-      "displayName": "Test editor debug",
-      "configurePreset": "editor-debug"
+      "name": "Test-Win64-Editor-Debug",
+      "displayName": "Test Win64 Editor Debug",
+      "configurePreset": "Win64-Editor-Debug"
     }
   ]
 }

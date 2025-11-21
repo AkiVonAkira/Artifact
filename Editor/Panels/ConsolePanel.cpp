@@ -13,7 +13,11 @@ public:
     }
 
     void draw(PanelContext& ctx) override {
-        ImGui::Begin("Console");
+        const char* title = ctx.windowTitle ? ctx.windowTitle : "Console";
+        if (!ImGui::Begin(title, ctx.closeable ? ctx.openFlag : nullptr)) {
+            ImGui::End();
+            return;
+        }
         if (ImGui::Button("Clear")) {
             ctx.state.consoleMessages.clear();
         }
