@@ -7,30 +7,34 @@
 #include <vector>
 
 namespace sol {
-class state;
+    class state;
 }
 
 namespace Artifact::Scripting {
+    class LuaContext {
+    public:
+        using ReloadCallback = std::function<void(const std::string &module)>;
 
-class LuaContext {
-public:
-    using ReloadCallback = std::function<void(const std::string& module)>;
+        LuaContext();
 
-    LuaContext();
-    ~LuaContext();
+        ~LuaContext();
 
-    void executeFile(const std::filesystem::path& file);
-    void executeString(const std::string& code);
-    void enqueueReload(const std::string& moduleName);
-    void pollReloads();
-    void registerReloadCallback(ReloadCallback cb);
-    sol::state& state();
+        void executeFile(const std::filesystem::path &file);
 
-private:
-    struct Impl;
-    std::unique_ptr<Impl> m_impl;
-    std::vector<std::string> m_reloadQueue;
-    std::vector<ReloadCallback> m_callbacks;
-};
+        void executeString(const std::string &code);
 
+        void enqueueReload(const std::string &moduleName);
+
+        void pollReloads();
+
+        void registerReloadCallback(ReloadCallback cb);
+
+        sol::state &state();
+
+    private:
+        struct Impl;
+        std::unique_ptr<Impl> m_impl;
+        std::vector<std::string> m_reloadQueue;
+        std::vector<ReloadCallback> m_callbacks;
+    };
 }

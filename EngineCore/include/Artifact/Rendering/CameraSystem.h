@@ -6,15 +6,13 @@
 #include "Artifact/Scene/Components.h"
 
 namespace Artifact::Rendering {
+    class CameraSystem {
+    public:
+        CameraSystem() = default;
 
-class CameraSystem {
-public:
-    CameraSystem() = default;
+        void update(entt::registry & /*registry*/) {
+        }
 
-    void update(entt::registry& /*registry*/) {}
-
-    Camera* getPrimaryCamera(entt::registry& registry);
-};
-
+        Camera *getPrimaryCamera(entt::registry &registry);
+    };
 } // namespace Artifact::Rendering
-

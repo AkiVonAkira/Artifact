@@ -1,6 +1,10 @@
 #pragma once
 
+#include <memory>
+#include <spdlog/common.h>
 #include <entt/entity/entity.hpp>
+#include <vector>
+#include <string>
 
 #include "EditorState.h"
 #include "Artifact/Assets/AssetWatcher.h"
@@ -10,100 +14,120 @@
 #include "Viewport/EditorCameraController.h"
 #include "Panels/PanelRegistry.h"
 #include "Panels/PanelInstances.h"
+#include "Artifact/UI/Overlay.h"
 
 namespace Artifact::Core {
-class Application;
-class PlayModeController;
+    class Application;
+    class PlayModeController;
 }
 
 namespace Artifact::Scripting {
-class LuaContext;
-class LuaRuntimeSystem;
-class ScriptAssetService;
-class LuaBindings;
-struct ScriptAsset;
+    struct ScriptAsset;
 }
 
 namespace Artifact::Scene {
-class SceneService;
+    class SceneService;
 }
 
-namespace Artifact::Rendering {
-class Renderer;
-}
 
 namespace Artifact::Editor {
-class EditorCameraController;
+    class EditorCameraController;
 
-class EditorLayer {
-public:
-    static const ImVec4 kInfoColor;
-    static const ImVec4 kWarningColor;
-    static const ImVec4 kErrorColor;
+    class EditorLayer {
+    public:
+        static const ImVec4 kInfoColor;
+        static const ImVec4 kWarningColor;
+        static const ImVec4 kErrorColor;
 
-    explicit EditorLayer(Artifact::Core::Application& application);
+        explicit EditorLayer(Artifact::Core::Application &application);
 
-    void drawPlayControlsInMenuBar();
-    void drawStatusBarContent();
-    void renderSceneViewport(const ImVec2& viewportSize);
+        ~EditorLayer();
 
-    void refreshScriptAssets(bool announce = true);
-    void createDefaultScene();
+        void drawPlayControlsInMenuBar();
 
-    std::string trimString(const std::string& value) const;
+        void drawStatusBarContent();
 
-    entt::entity addEntity(const std::string& name);
-    void duplicateEntity(entt::entity entity);
-    void removeSelectedEntity();
-    void selectEntity(entt::entity entity);
-    entt::entity getSelectedEntity() const;
-    void assignScriptToSelection(const std::string& scriptName);
+        void renderSceneViewport(const ImVec2 &viewportSize);
 
-    bool createLuaScript(const std::string& scriptName);
-    void pushConsoleMessage(const std::string& message, const ImVec4& color = ImVec4(0.8f, 0.8f, 0.8f, 1.0f));
-    void executeLuaCommand(const std::string& command);
+        void drawEditorCameraOverlay(const ImVec2 &viewportSize, bool viewportFocused, bool viewportHovered);
 
-    void onScriptPropertiesModified(entt::entity entity);
+        void drawCameraPreviewOverlay(const ImVec2 &viewportSize);
 
-    void enterPlayMode();
-    void stopPlayMode();
-    void stepOnce();
+        void drawSceneCameraFrustums(const ImVec2 &panelMin, const ImVec2 &panelSize);
 
-    void requestExit();
-    void resetLayout();
+        void drawViewportInputHints(const ImVec2 &panelMin, const ImVec2 &panelSize, bool focused, bool hovered);
 
-    Scene::SceneService& sceneService() const;
-    Scripting::ScriptAssetService& scriptAssets() const;
-    Scripting::LuaRuntimeSystem& luaRuntime() const;
-    Core::PlayModeController& playMode() const;
+        void refreshScriptAssets(bool announce = true);
 
-    Rendering::Camera* activeViewportCamera();
-    const std::vector<PanelDescriptor>& panelDescriptors() const;
-    void openPanel(const std::string& id, bool forceNewInstance = false);
+        void createDefaultScene();
 
-private:
-    void registerPanels();
-    void rebuildPanelDescriptors();
-    void synchronizeSceneScripts();
-    void handleScriptAssetChange(const Assets::AssetChange& change);
-    const Scripting::ScriptAsset* findScriptByName(const std::string& name) const;
-    void synchronizeScriptFields(Scene::LuaScriptComponent& component, const Scripting::ScriptAsset& asset) const;
+        std::string trimString(const std::string &value) const;
 
-    Core::Application& m_application;
-    Core::RuntimeConfig m_runtimeConfig{};
-    Scripting::LuaContext* m_luaContext{nullptr};
-    Rendering::Renderer* m_renderer{nullptr};
-    Scene::SceneService* m_sceneService{nullptr};
-    Scripting::ScriptAssetService* m_scriptAssets{nullptr};
-    Scripting::LuaRuntimeSystem* m_luaRuntime{nullptr};
-    Core::PlayModeController* m_playMode{nullptr};
-    Scripting::LuaBindings* m_luaBindings{nullptr};
+        std::string requestMeshAsset(const std::string &currentPath);
 
-    EditorState m_state;
+        entt::entity addEntity(const std::string &name);
 
-    std::unique_ptr<EditorCameraController> m_editorCamera;
-    Rendering::Camera* m_runtimeCamera{nullptr};
-    PanelManager m_panelManager;
-};
+        void duplicateEntity(entt::entity entity);
 
+        void removeSelectedEntity();
+
+        void selectEntity(entt::entity entity);
+
+        entt::entity getSelectedEntity() const;
+
+        void assignScriptToSelection(const std::string &scriptName);
+
+        bool createLuaScript(const std::string &scriptName);
+
+        void pushConsoleMessage(const std::string &message, spdlog::level::level_enum level = spdlog::level::info);
+
+        void executeLuaCommand(const std::string &command);
+
+        void onScriptPropertiesModified(entt::entity entity);
+
+        void enterPlayMode();
+
+        void stopPlayMode();
+
+        void stepOnce();
+
+        void requestExit();
+
+        void resetLayout();
+
+        // Legacy accessors (prefer using singleton managers directly)
+        Scene::SceneService &sceneService() const; // TODO: Remove after panel updates
+        Core::PlayModeController &playMode() const;
+
+        Rendering::Camera *activeViewportCamera();
+
+        const std::vector<PanelDescriptor> &panelDescriptors() const;
+
+        void openPanel(const std::string &id, bool forceNewInstance = false);
+
+    private:
+        void registerPanels();
+
+        void rebuildPanelDescriptors();
+
+        void synchronizeSceneScripts();
+
+        void handleScriptAssetChange(const Assets::AssetChange &change);
+
+        const Scripting::ScriptAsset *findScriptByName(const std::string &name) const;
+
+        void synchronizeScriptFields(Scene::LuaScriptComponent &component, const Scripting::ScriptAsset &asset) const;
+
+        Core::Application &m_application;
+        Core::RuntimeConfig m_runtimeConfig{};
+        Scene::SceneService *m_sceneService{nullptr}; // TODO: Remove after migration to SceneManager
+        Core::PlayModeController *m_playMode{nullptr}; // TODO: Migrate to singleton
+
+        EditorState m_state;
+
+        std::unique_ptr<EditorCameraController> m_editorCamera;
+        Rendering::Camera *m_runtimeCamera{nullptr};
+        PanelManager m_panelManager;
+        std::shared_ptr<spdlog::sinks::sink> m_consoleSink;
+    };
 }

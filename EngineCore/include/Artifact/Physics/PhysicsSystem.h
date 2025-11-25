@@ -3,18 +3,18 @@
 #include <memory>
 
 namespace Artifact::Physics {
+    class PhysicsSystem {
+    public:
+        PhysicsSystem();
 
-class PhysicsSystem {
-public:
-    PhysicsSystem();
-    ~PhysicsSystem();
+        ~PhysicsSystem();
 
-    void step2D(float dt);
-    void step3D(float dt);
+        void Step2D(float dt);
 
-private:
-    struct Impl;
-    std::unique_ptr<Impl> m_impl;
-};
+        void Step3D(float dt);
 
+    private:
+        struct Impl;
+        std::unique_ptr<Impl> m_impl;
+    };
 }

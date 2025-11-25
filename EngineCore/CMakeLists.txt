@@ -4,22 +4,34 @@ set(ENGINECORE_HEADERS
     include/Artifact/Core/Instrumentation.h
     include/Artifact/Core/PlayModeController.h
     include/Artifact/Core/Paths.h
+    include/Artifact/Core/LoggingManager.h
+    include/Artifact/Core/Singleton.h
+    include/Artifact/Core/ManagerRegistry.h
+    include/Artifact/Core/Macros.h
+    include/Artifact/Core/LogManager.h
+    include/Artifact/Core/InputManager.h
+    include/Artifact/Core/TimeManager.h
     include/Artifact/Assets/AssetWatcher.h
     include/Artifact/Assets/Mesh.h
     include/Artifact/Assets/MeshManager.h
+    include/Artifact/Assets/AssetManager.h
+    include/Artifact/Assets/AssetHandle.h
     include/Artifact/Physics/PhysicsSystem.h
+    include/Artifact/Physics/PhysicsManager.h
     include/Artifact/Rendering/Camera.h
     include/Artifact/Rendering/CameraSystem.h
-    include/Artifact/Rendering/Renderer.h
+    include/Artifact/Rendering/RenderManager.h
     include/Artifact/Scene/ComponentRegistry.h
     include/Artifact/Scene/Components.h
     include/Artifact/Scene/Prefabs.h
     include/Artifact/Scene/SceneContext.h
     include/Artifact/Scene/SceneService.h
+    include/Artifact/Scene/SceneManager.h
     include/Artifact/Scripting/LuaBindings.h
     include/Artifact/Scripting/LuaContext.h
     include/Artifact/Scripting/LuaRuntimeSystem.h
     include/Artifact/Scripting/ScriptAssetService.h
+    include/Artifact/Scripting/ScriptManager.h
     include/Artifact/UI/Overlay.h
     include/Artifact/Core/GameplayTest.h
 )
@@ -27,22 +39,31 @@ set(ENGINECORE_HEADERS
 set(ENGINECORE_SOURCES
     Assets/AssetWatcher.cpp
     Assets/MeshManager.cpp
+    Assets/AssetManager.cpp
     Core/Application.cpp
     Core/Config.cpp
     Core/PlayModeController.cpp
     Core/Paths.cpp
+    Core/LoggingManager.cpp
+    Core/ManagerRegistry.cpp
+    Core/LogManager.cpp
+    Core/InputManager.cpp
+    Core/TimeManager.cpp
     Physics/PhysicsSystem.cpp
+    Physics/PhysicsManager.cpp
     Rendering/Camera.cpp
     Rendering/CameraSystem.cpp
-    Rendering/Renderer.cpp
+    Rendering/RenderManager.cpp
     Scene/ComponentRegistry.cpp
     Scene/Prefabs.cpp
     Scene/SceneContext.cpp
     Scene/SceneService.cpp
+    Scene/SceneManager.cpp
     Scripting/LuaBindings.cpp
     Scripting/LuaContext.cpp
     Scripting/LuaRuntimeSystem.cpp
     Scripting/ScriptAssetService.cpp
+    Scripting/ScriptManager.cpp
     UI/Overlay.cpp
     Core/GameplayTestRegistry.cpp
 )

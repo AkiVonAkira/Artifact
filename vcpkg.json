@@ -22,6 +22,7 @@
     },
     "imguizmo",
     "joltphysics",
+    "polyclipping",
     "luajit",
     "sol2",
     "spdlog",

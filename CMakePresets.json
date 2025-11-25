@@ -50,6 +50,17 @@
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
         "ARTIFACT_ENABLE_TRACY": "OFF"
       }
+    },
+    {
+      "name": "Win64-Tests-Debug",
+      "displayName": "Win64 Tests Debug",
+      "description": "Debug build focused on the tests executable (runtime + tests enabled).",
+      "inherits": "ninja-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "ARTIFACT_ENABLE_RUNTIME": "ON",
+        "ARTIFACT_ENABLE_TESTS": "ON"
+      }
     }
   ],
   "buildPresets": [
@@ -62,6 +73,11 @@
       "name": "Build-Win64-Editor-RelWithDebInfo",
       "displayName": "Build Win64 Editor RelWithDebInfo",
       "configurePreset": "Win64-Editor-RelWithDebInfo"
+    },
+    {
+      "name": "Build-Win64-Tests-Debug",
+      "displayName": "Build Win64 Tests Debug",
+      "configurePreset": "Win64-Tests-Debug"
     }
   ],
   "testPresets": [
@@ -69,6 +85,11 @@
       "name": "Test-Win64-Editor-Debug",
       "displayName": "Test Win64 Editor Debug",
       "configurePreset": "Win64-Editor-Debug"
+    },
+    {
+      "name": "Test-Win64-Tests-Debug",
+      "displayName": "Test Win64 Tests Debug",
+      "configurePreset": "Win64-Tests-Debug"
     }
   ]
 }

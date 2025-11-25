@@ -9,7 +9,8 @@
   "files.associations": {
     "*.h": "cpp",
     "*.cpp": "cpp",
-    "*.tpp": "cpp"
+    "*.tpp": "cpp",
+    "filesystem": "cpp"
   },
   "cmake.options.statusBarVisibility": "visible",
   "cmake.options.advanced": {

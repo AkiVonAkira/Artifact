@@ -9,38 +9,46 @@
 #include "Artifact/Scene/Components.h"
 
 namespace Artifact::Scripting {
+    class LuaContext;
 
-class LuaContext;
+    class LuaBindings {
+    public:
+        explicit LuaBindings(LuaContext &context);
 
-class LuaBindings {
-public:
-    explicit LuaBindings(LuaContext& context);
+        void registerInputBindings(std::function<bool(int)> keyQuery);
 
-    void registerInputBindings(std::function<bool(int)> keyQuery);
-    void registerTimeBindings();
-    void registerEntityBindings();
+        void registerTimeBindings();
 
-    void setRegistry(entt::registry* registry);
-    void setActiveEntity(entt::entity entity);
-    void clearActiveEntity();
+        void registerEntityBindings();
 
-    void updateDeltaTime(float deltaTime);
-    void updateEntityMetadata(const std::string& name, int id);
-    void clearEntityMetadata();
+        void setRegistry(entt::registry *registry);
 
-private:
-    LuaContext& m_context;
-    std::function<bool(int)> m_keyQuery;
-    entt::registry* m_registry{nullptr};
-    entt::entity m_activeEntity{entt::null};
+        void setActiveEntity(entt::entity entity);
 
-    sol::table ensureInputTable();
-    sol::table ensureEntityTable();
-    sol::table ensureTimeTable();
-    sol::table ensureTable(const char* name);
+        void clearActiveEntity();
 
-    Scene::TransformComponent* getActiveTransform();
-    const Scene::NameComponent* getActiveName() const;
-};
+        void updateDeltaTime(float deltaTime);
 
+        void updateEntityMetadata(const std::string &name, int id);
+
+        void clearEntityMetadata();
+
+    private:
+        LuaContext &m_context;
+        std::function<bool(int)> m_keyQuery;
+        entt::registry *m_registry{nullptr};
+        entt::entity m_activeEntity{entt::null};
+
+        sol::table ensureInputTable();
+
+        sol::table ensureEntityTable();
+
+        sol::table ensureTimeTable();
+
+        sol::table ensureTable(const char *name);
+
+        Scene::TransformComponent *getActiveTransform();
+
+        const Scene::NameComponent *getActiveName() const;
+    };
 }

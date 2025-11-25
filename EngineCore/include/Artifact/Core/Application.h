@@ -16,77 +16,86 @@
 struct GLFWwindow;
 
 namespace Artifact::Rendering {
-class Renderer;
+    class RenderManager;
+    using Renderer = RenderManager; // Backward compatibility alias
 }
 
 namespace Artifact::Scripting {
-class LuaContext;
+    class LuaContext;
 }
 
 namespace Artifact::Assets {
-class AssetWatcher;
-struct AssetChange;
+    class AssetWatcher;
+    struct AssetChange;
 }
 
 namespace Artifact::Core {
+    class Application;
+    class PlayModeController;
+    class LoggingManager;
+    class LogManager;
+}
 
-struct ApplicationCreateInfo {
-    std::string windowTitle{"Artifact Editor"};
-    int32_t width{1600};
-    int32_t height{900};
-    bool enableEditor{true};
-    bool enableRuntime{true};
-};
+namespace Artifact::Core {
+    struct ApplicationCreateInfo {
+        std::string windowTitle{"Artifact Editor"};
+        int32_t width{1600};
+        int32_t height{900};
+        bool enableEditor{true};
+        bool enableRuntime{true};
+    };
 
-class Application {
-public:
-    explicit Application(const ApplicationCreateInfo& info);
-    ~Application();
+    class Application {
+    public:
+        explicit Application(const ApplicationCreateInfo &info);
 
-    void run();
-    void requestExit();
-    void registerEditorPanel(UI::Overlay::PanelCallback callback);
-    void clearEditorPanels();
-    void setStatusBarCallback(UI::Overlay::PanelCallback callback);
-    void resetLayout();
-    bool isKeyDown(int key) const;
-    using ScriptAssetCallback = std::function<void(const Assets::AssetChange&)>;
-    void registerScriptAssetListener(ScriptAssetCallback callback);
+        ~Application();
 
-    UI::Overlay* overlay();
-    Scripting::LuaContext* luaContext();
-    Rendering::Renderer* renderer();
-    const Rendering::Renderer* renderer() const;
-    const RuntimeConfig& runtimeConfig() const;
-    Scene::SceneService* sceneService();
-    Scripting::ScriptAssetService* scriptAssets();
-    Scripting::LuaRuntimeSystem* luaRuntime();
-    PlayModeController* playMode();
-    Scripting::LuaBindings* luaBindings();
-    const Scripting::LuaBindings* luaBindings() const;
+        void run();
 
-private:
-    void initializeWindow();
-    void initializeDearImgui();
-    void initializeLua();
-    void notifyScriptAssetListeners(const Assets::AssetChange& change);
-    void pumpWatchers();
+        void requestExit();
 
-    ApplicationCreateInfo m_info{};
-    RuntimeConfig m_runtimeConfig{};
-    bool m_shouldExit{false};
-    GLFWwindow* m_window{nullptr};
+        void registerEditorPanel(UI::Overlay::PanelCallback callback);
 
-    std::unique_ptr<Rendering::Renderer> m_renderer;
-    std::unique_ptr<Scripting::LuaContext> m_luaContext;
-    std::unique_ptr<Assets::AssetWatcher> m_assetWatcher;
-    std::unique_ptr<UI::Overlay> m_overlay;
-    std::vector<ScriptAssetCallback> m_scriptAssetCallbacks;
-    std::unique_ptr<Scene::SceneService> m_sceneService;
-    std::unique_ptr<Scripting::ScriptAssetService> m_scriptAssets;
-    std::unique_ptr<Scripting::LuaRuntimeSystem> m_luaRuntime;
-    std::unique_ptr<PlayModeController> m_playModeController;
-    std::unique_ptr<Scripting::LuaBindings> m_luaBindings;
-};
+        void clearEditorPanels();
 
+        void setStatusBarCallback(UI::Overlay::PanelCallback callback);
+
+        void resetLayout();
+
+        bool isKeyDown(int key) const;
+
+        using ScriptAssetCallback = std::function<void(const Assets::AssetChange &)>;
+
+        void registerScriptAssetListener(ScriptAssetCallback callback);
+
+        UI::Overlay *overlay();
+
+        const RuntimeConfig &runtimeConfig() const;
+
+        Scene::SceneService *sceneService();
+
+        PlayModeController *playMode();
+
+    private:
+        void initializeWindow();
+
+        void initializeDearImgui();
+
+        void notifyScriptAssetListeners(const Assets::AssetChange &change);
+
+        void pumpWatchers();
+
+        ApplicationCreateInfo m_info{};
+        RuntimeConfig m_runtimeConfig{};
+        bool m_shouldExit{false};
+        GLFWwindow *m_window{nullptr};
+
+        std::unique_ptr<Assets::AssetWatcher> m_assetWatcher;
+        std::unique_ptr<UI::Overlay> m_overlay;
+        std::vector<ScriptAssetCallback> m_scriptAssetCallbacks;
+        std::unique_ptr<Scene::SceneService> m_sceneService;
+        std::unique_ptr<PlayModeController> m_playModeController;
+        std::unique_ptr<LoggingManager> m_loggingManager;
+    };
 }

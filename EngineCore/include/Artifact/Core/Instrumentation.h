@@ -10,7 +10,7 @@
 #endif
 
 namespace Artifact::Core {
-struct FrameScopeGuard {
-    FrameScopeGuard() { ARTIFACT_ZONE(); }
-};
+    struct FrameScopeGuard {
+        FrameScopeGuard() { ARTIFACT_ZONE(); }
+    };
 }

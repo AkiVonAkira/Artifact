@@ -1,10 +1,17 @@
 #include "Artifact/Core/Application.h"
+#include "Artifact/Core/LoggingManager.h"
+#include "Artifact/Core/LogManager.h"
+#include "Artifact/Core/InputManager.h"
+#include "Artifact/Core/TimeManager.h"
 
 #include "Artifact/Assets/AssetWatcher.h"
+#include "Artifact/Assets/AssetManager.h"
+#include "Artifact/Scene/SceneManager.h"
+#include "Artifact/Rendering/RenderManager.h"
+#include "Artifact/Scripting/ScriptManager.h"
+#include "Artifact/Physics/PhysicsManager.h"
 #include "Artifact/Core/Config.h"
 #include "Artifact/Core/Instrumentation.h"
-#include "Artifact/Rendering/Renderer.h"
-#include "Artifact/Scripting/LuaContext.h"
 #include "Artifact/UI/Overlay.h"
 
 #include <glad/glad.h>
@@ -18,257 +25,357 @@
 #include <filesystem>
 #include <utility>
 
+#include "Artifact/Core/Macros.h"
+
 namespace Artifact::Core {
+    namespace {
+        constexpr const char *kImguiGlsl = "#version 330";
+    }
 
-namespace {
-constexpr const char* kImguiGlsl = "#version 330";
-}
+    Application::Application(const ApplicationCreateInfo &info)
+        : m_info(info) {
+        // Initialize singleton managers
+        const std::string logDir = (std::filesystem::path(Artifact::Core::Paths::ProjectRoot()) / "Logs").string();
+        LogManager::Instance().Initialize(logDir);
+        LogManager::Instance().SetLevel(spdlog::level::info);
+        LogManager::Instance().FlushOn(spdlog::level::warn);
 
-Application::Application(const ApplicationCreateInfo& info)
-    : m_info(info) {
-    ARTIFACT_ZONE();
-    m_runtimeConfig = LoadRuntimeConfig();
-    initializeWindow();
-    initializeDearImgui();
-    initializeLua();
+        // Keep old LoggingManager for compatibility during migration
+        m_loggingManager = std::make_unique<LoggingManager>();
+        m_loggingManager->initialize(logDir);
+        m_loggingManager->setLevel(spdlog::level::info);
+        m_loggingManager->flushOn(spdlog::level::warn);
 
-    m_renderer = std::make_unique<Rendering::Renderer>();
-    m_assetWatcher = std::make_unique<Assets::AssetWatcher>();
-    m_overlay = std::make_unique<UI::Overlay>();
-    m_sceneService = std::make_unique<Scene::SceneService>();
-    m_scriptAssets = std::make_unique<Scripting::ScriptAssetService>(m_runtimeConfig, *m_luaContext);
-    m_scriptAssets->refresh(true);
-    m_sceneService->createDefaultScene(m_scriptAssets.get());
-    m_playModeController = std::make_unique<PlayModeController>();
-    m_luaBindings = std::make_unique<Scripting::LuaBindings>(*m_luaContext);
-    m_luaRuntime = std::make_unique<Scripting::LuaRuntimeSystem>(*m_luaContext, *m_scriptAssets, *m_luaBindings);
+        initializeWindow();
 
-    if (m_assetWatcher) {
-        m_assetWatcher->watch(m_runtimeConfig.paths.rawAssets, [this](const Assets::AssetChange& change) {
-            const auto ext = change.path.extension().string();
-            if (ext == ".lua") {
-                if (m_luaContext && change.type != Assets::AssetChange::Type::Removed) {
-                    m_luaContext->enqueueReload(change.path.stem().string());
+        LOG_INFO("Initializing InputManager...");
+        spdlog::default_logger()->flush();
+        // Initialize InputManager with window
+        InputManager::Instance().Initialize(m_window);
+        LOG_INFO("InputManager initialized successfully");
+        spdlog::default_logger()->flush();
+
+        LOG_INFO("Initializing TimeManager...");
+        spdlog::default_logger()->flush();
+        // Initialize TimeManager
+        TimeManager::Instance().Initialize();
+        LOG_INFO("TimeManager initialized successfully");
+        spdlog::default_logger()->flush();
+
+        LOG_INFO("Initializing AssetManager...");
+        spdlog::default_logger()->flush();
+        // Initialize AssetManager with hot-reload enabled
+        Assets::AssetManager::Instance().Initialize(true);
+        LOG_INFO("AssetManager initialized successfully");
+        spdlog::default_logger()->flush();
+
+        LOG_INFO("Initializing SceneManager...");
+        spdlog::default_logger()->flush();
+        // Initialize SceneManager
+        Scene::SceneManager::Instance().Initialize();
+        LOG_INFO("SceneManager initialized successfully");
+        spdlog::default_logger()->flush();
+
+        initializeDearImgui();
+
+        LOG_INFO("Initializing RenderManager...");
+        spdlog::default_logger()->flush();
+        // Initialize singleton managers (they initialize in their constructors)
+        // Just access to trigger construction
+        Rendering::RenderManager::Instance();
+        LOG_INFO("RenderManager initialized successfully");
+        spdlog::default_logger()->flush();
+
+        LOG_INFO("Initializing PhysicsManager...");
+        spdlog::default_logger()->flush();
+        Physics::PhysicsManager::Instance();
+        LOG_INFO("PhysicsManager initialized successfully");
+        spdlog::default_logger()->flush();
+
+        // Initialize ScriptManager with paths
+        LOG_INFO("Initializing ScriptManager with paths...");
+        spdlog::default_logger()->flush();
+        Scripting::ScriptManager::Instance().Initialize(m_runtimeConfig.paths.rawAssets);
+
+        LOG_INFO("Registering input bindings...");
+        spdlog::default_logger()->flush();
+        Scripting::ScriptManager::Instance().RegisterInputBindings([this](int key) {
+            return isKeyDown(key);
+        });
+
+        LOG_INFO("Registering time bindings...");
+        spdlog::default_logger()->flush();
+        Scripting::ScriptManager::Instance().RegisterTimeBindings();
+
+        LOG_INFO("Registering entity bindings...");
+        spdlog::default_logger()->flush();
+        Scripting::ScriptManager::Instance().RegisterEntityBindings();
+
+        LOG_INFO("Refreshing scripts...");
+        spdlog::default_logger()->flush();
+        Scripting::ScriptManager::Instance().RefreshScripts(true);
+
+        LOG_INFO("ScriptManager fully initialized");
+        spdlog::default_logger()->flush();
+
+        LOG_INFO("Creating AssetWatcher...");
+        spdlog::default_logger()->flush();
+        m_assetWatcher = std::make_unique<Assets::AssetWatcher>();
+        LOG_INFO("AssetWatcher created successfully");
+        spdlog::default_logger()->flush();
+
+        LOG_INFO("Creating UI Overlay...");
+        spdlog::default_logger()->flush();
+        m_overlay = std::make_unique<UI::Overlay>();
+        LOG_INFO("UI Overlay created successfully");
+        spdlog::default_logger()->flush();
+
+        LOG_INFO("Creating SceneService...");
+        spdlog::default_logger()->flush();
+        m_sceneService = std::make_unique<Scene::SceneService>();
+        LOG_INFO("SceneService created successfully");
+        spdlog::default_logger()->flush();
+
+        // Use singleton SceneManager and ScriptManager (old sceneService kept for compatibility)
+        LOG_INFO("Creating default scene...");
+        spdlog::default_logger()->flush();
+        Scene::SceneManager::Instance().CreateDefaultScene(Scripting::ScriptManager::Instance().GetAssetService());
+        LOG_INFO("Default scene created successfully");
+        spdlog::default_logger()->flush();
+
+        LOG_INFO("Creating PlayModeController...");
+        spdlog::default_logger()->flush();
+        m_playModeController = std::make_unique<PlayModeController>();
+        LOG_INFO("PlayModeController created successfully");
+        spdlog::default_logger()->flush();
+
+        // Set registry for script bindings
+        if (m_sceneService) {
+            Scripting::ScriptManager::Instance().SetRegistry(&m_sceneService->context().registry);
+        }
+
+        if (m_assetWatcher) {
+            m_assetWatcher->watch(m_runtimeConfig.paths.rawAssets, [this](const Assets::AssetChange &change) {
+                const auto ext = change.path.extension().string();
+                if (ext == ".lua") {
+                    if (change.type != Assets::AssetChange::Type::Removed) {
+                        Scripting::ScriptManager::Instance().EnqueueReload(change.path.stem().string());
+                    }
+                    notifyScriptAssetListeners(change);
                 }
-                notifyScriptAssetListeners(change);
-            }
-        });
+            });
 
-        m_assetWatcher->watch(m_runtimeConfig.paths.shaderRoot, [](const Assets::AssetChange& change) {
-            spdlog::info("Shader changed: {} (queued for recompile)", change.path.string());
-        });
+            m_assetWatcher->watch(m_runtimeConfig.paths.shaderRoot, [](const Assets::AssetChange &change) {
+                spdlog::info("Shader changed: {} (queued for recompile)", change.path.string());
+            });
+        }
     }
-}
 
-Application::~Application() {
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
-    ImGui::DestroyContext();
+    Application::~Application() {
+        // Note: Singleton managers clean up automatically in their destructors when the program exits
+        // We keep the explicit Shutdown calls here for managers that need explicit cleanup
+        Scene::SceneManager::Instance().Shutdown();
+        Assets::AssetManager::Instance().Shutdown();
+        TimeManager::Instance().Shutdown();
+        InputManager::Instance().Shutdown();
+        LogManager::Instance().Shutdown();
 
-    if (m_window) {
-        glfwDestroyWindow(m_window);
-        glfwTerminate();
-        m_window = nullptr;
+        ImGui_ImplOpenGL3_Shutdown();
+        ImGui_ImplGlfw_Shutdown();
+        ImGui::DestroyContext();
+
+        if (m_window) {
+            glfwDestroyWindow(m_window);
+            glfwTerminate();
+            m_window = nullptr;
+        }
     }
-}
 
-void Application::run() {
-    ARTIFACT_ZONE();
-    auto lastFrame = std::chrono::high_resolution_clock::now();
-
-    while (!m_shouldExit && !glfwWindowShouldClose(m_window)) {
+    void Application::run() {
         ARTIFACT_ZONE();
-        auto now = std::chrono::high_resolution_clock::now();
-        const float delta = std::chrono::duration<float>(now - lastFrame).count();
-        lastFrame = now;
 
-        int fbWidth = 0;
-        int fbHeight = 0;
-        glfwGetFramebufferSize(m_window, &fbWidth, &fbHeight);
+        while (!m_shouldExit && !glfwWindowShouldClose(m_window)) {
+            ARTIFACT_ZONE();
 
-        glfwPollEvents();
-        pumpWatchers();
-        m_luaContext->pollReloads();
+            // Update singleton managers
+            TimeManager::Instance().Update();
+            InputManager::Instance().Update();
 
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
+            const float delta = TimeManager::Instance().DeltaTime();
 
-        Rendering::FrameContext ctx{delta, fbWidth, fbHeight};
-        m_renderer->beginFrame(ctx);
+            int fbWidth = 0;
+            int fbHeight = 0;
+            glfwGetFramebufferSize(m_window, &fbWidth, &fbHeight);
 
-        m_overlay->drawDockspace(m_info.enableEditor);
-        if (m_info.enableEditor) {
-            m_overlay->drawPanels();
+            glfwPollEvents();
+
+            // Update AssetManager for hot-reload
+            Assets::AssetManager::Instance().Update();
+
+            pumpWatchers();
+            Scripting::ScriptManager::Instance().PollReloads();
+
+            ImGui_ImplOpenGL3_NewFrame();
+            ImGui_ImplGlfw_NewFrame();
+            ImGui::NewFrame();
+
+            Rendering::FrameContext ctx{delta, fbWidth, fbHeight};
+            Rendering::RenderManager::Instance().BeginFrame(ctx);
+
+            m_overlay->drawDockspace(m_info.enableEditor);
+            if (m_info.enableEditor) {
+                m_overlay->drawPanels();
+            }
+            m_overlay->drawProfiler(delta * 1000.0f);
+
+            ImGui::Render();
+            Rendering::RenderManager::Instance().EndFrame();
+            ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+            if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
+                GLFWwindow *backupWindow = glfwGetCurrentContext();
+                ImGui::UpdatePlatformWindows();
+                ImGui::RenderPlatformWindowsDefault();
+                glfwMakeContextCurrent(backupWindow);
+            }
+
+            glfwSwapBuffers(m_window);
+            ARTIFACT_FRAME_MARK;
         }
-        m_overlay->drawProfiler(delta * 1000.0f);
+    }
 
-        ImGui::Render();
-        m_renderer->endFrame();
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    void Application::requestExit() {
+        m_shouldExit = true;
+    }
 
-        if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
-            GLFWwindow* backupWindow = glfwGetCurrentContext();
-            ImGui::UpdatePlatformWindows();
-            ImGui::RenderPlatformWindowsDefault();
-            glfwMakeContextCurrent(backupWindow);
+    void Application::registerEditorPanel(UI::Overlay::PanelCallback callback) {
+        if (!m_overlay || !m_info.enableEditor) {
+            return;
         }
-
-        glfwSwapBuffers(m_window);
-        ARTIFACT_FRAME_MARK;
-    }
-}
-
-void Application::requestExit() {
-    m_shouldExit = true;
-}
-
-void Application::registerEditorPanel(UI::Overlay::PanelCallback callback) {
-    if (!m_overlay || !m_info.enableEditor) {
-        return;
-    }
-    m_overlay->registerPanel(std::move(callback));
-}
-
-void Application::clearEditorPanels() {
-    if (m_overlay) {
-        m_overlay->clearPanels();
-    }
-}
-
-void Application::setStatusBarCallback(UI::Overlay::PanelCallback callback) {
-    if (m_overlay) {
-        m_overlay->setStatusBarCallback(std::move(callback));
-    }
-}
-
-void Application::resetLayout() {
-    if (m_overlay) {
-        m_overlay->requestDefaultLayout();
-    }
-}
-
-bool Application::isKeyDown(int key) const {
-    if (!m_window) {
-        return false;
-    }
-    return glfwGetKey(m_window, key) == GLFW_PRESS;
-}
-
-UI::Overlay* Application::overlay() {
-    return m_overlay.get();
-}
-
-Scripting::LuaContext* Application::luaContext() {
-    return m_luaContext.get();
-}
-
-Scene::SceneService* Application::sceneService() {
-    return m_sceneService.get();
-}
-
-Scripting::ScriptAssetService* Application::scriptAssets() {
-    return m_scriptAssets.get();
-}
-
-Scripting::LuaRuntimeSystem* Application::luaRuntime() {
-    return m_luaRuntime.get();
-}
-
-PlayModeController* Application::playMode() {
-    return m_playModeController.get();
-}
-
-Scripting::LuaBindings* Application::luaBindings() {
-    return m_luaBindings.get();
-}
-
-const Scripting::LuaBindings* Application::luaBindings() const {
-    return m_luaBindings.get();
-}
-
-const RuntimeConfig& Application::runtimeConfig() const {
-    return m_runtimeConfig;
-}
-
-void Application::registerScriptAssetListener(ScriptAssetCallback callback) {
-    if (!callback) {
-        return;
-    }
-    m_scriptAssetCallbacks.emplace_back(std::move(callback));
-}
-
-void Application::initializeWindow() {
-    ARTIFACT_ZONE();
-    if (!glfwInit()) {
-        spdlog::critical("Failed to initialize GLFW");
-        std::terminate();
+        m_overlay->registerPanel(std::move(callback));
     }
 
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-    m_window = glfwCreateWindow(m_info.width, m_info.height, m_info.windowTitle.c_str(), nullptr, nullptr);
-    if (!m_window) {
-        spdlog::critical("Failed to create GLFW window");
-        std::terminate();
+    void Application::clearEditorPanels() {
+        if (m_overlay) {
+            m_overlay->clearPanels();
+        }
     }
 
-    glfwMakeContextCurrent(m_window);
-    glfwSwapInterval(1);
-
-    if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(glfwGetProcAddress))) {
-        spdlog::critical("Failed to initialize GLAD");
-        std::terminate();
+    void Application::setStatusBarCallback(UI::Overlay::PanelCallback callback) {
+        if (m_overlay) {
+            m_overlay->setStatusBarCallback(std::move(callback));
+        }
     }
-}
 
-void Application::initializeDearImgui() {
-    ARTIFACT_ZONE();
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGui::StyleColorsDark();
-
-    ImGuiIO& io = ImGui::GetIO();
-    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
-
-    ImGui_ImplGlfw_InitForOpenGL(m_window, true);
-    ImGui_ImplOpenGL3_Init(kImguiGlsl);
-}
-
-void Application::initializeLua() {
-    ARTIFACT_ZONE();
-    // Register script reload callback to log changes.
-    m_luaContext = std::make_unique<Scripting::LuaContext>();
-    m_luaContext->registerReloadCallback([](const std::string& module) {
-        spdlog::info("Reloaded Lua module: {}", module);
-    });
-}
-
-void Application::notifyScriptAssetListeners(const Assets::AssetChange& change) {
-    if (m_scriptAssetCallbacks.empty()) {
-        return;
+    void Application::resetLayout() {
+        if (m_overlay) {
+            m_overlay->requestDefaultLayout();
+        }
     }
-    for (auto& callback : m_scriptAssetCallbacks) {
-        callback(change);
+
+    bool Application::isKeyDown(int key) const {
+        return InputManager::Instance().IsKeyDown(key);
     }
-}
 
-void Application::pumpWatchers() {
-    ARTIFACT_ZONE();
-    if (m_assetWatcher) {
-        m_assetWatcher->pump();
+    UI::Overlay *Application::overlay() {
+        return m_overlay.get();
     }
-}
 
-Rendering::Renderer* Application::renderer() {
-    return m_renderer.get();
-}
+    Scene::SceneService *Application::sceneService() {
+        return m_sceneService.get();
+    }
 
-const Rendering::Renderer* Application::renderer() const {
-    return m_renderer.get();
-}
+    PlayModeController *Application::playMode() {
+        return m_playModeController.get();
+    }
 
+
+    const RuntimeConfig &Application::runtimeConfig() const {
+        return m_runtimeConfig;
+    }
+
+    void Application::registerScriptAssetListener(ScriptAssetCallback callback) {
+        if (!callback) {
+            return;
+        }
+        m_scriptAssetCallbacks.emplace_back(std::move(callback));
+    }
+
+    void Application::initializeWindow() {
+        ARTIFACT_ZONE();
+        LOG_INFO("Initializing GLFW...");
+        spdlog::default_logger()->flush();
+        if (!glfwInit()) {
+            spdlog::critical("Failed to initialize GLFW");
+            spdlog::default_logger()->flush();
+            std::terminate();
+        }
+        LOG_INFO("GLFW initialized successfully");
+        spdlog::default_logger()->flush();
+
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+        LOG_INFO("Creating GLFW window...");
+        spdlog::default_logger()->flush();
+        m_window = glfwCreateWindow(m_info.width, m_info.height, m_info.windowTitle.c_str(), nullptr, nullptr);
+        if (!m_window) {
+            spdlog::critical("Failed to create GLFW window");
+            spdlog::default_logger()->flush();
+            std::terminate();
+        }
+        LOG_INFO("GLFW window created successfully");
+        spdlog::default_logger()->flush();
+
+        glfwMakeContextCurrent(m_window);
+        glfwSwapInterval(1);
+
+        LOG_INFO("Initializing GLAD...");
+        spdlog::default_logger()->flush();
+        if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(glfwGetProcAddress))) {
+            spdlog::critical("Failed to initialize GLAD");
+            spdlog::default_logger()->flush();
+            std::terminate();
+        }
+        LOG_INFO("GLAD initialized successfully");
+        spdlog::default_logger()->flush();
+    }
+
+    void Application::initializeDearImgui() {
+        ARTIFACT_ZONE();
+        LOG_INFO("Initializing Dear ImGui...");
+        spdlog::default_logger()->flush();
+
+        IMGUI_CHECKVERSION();
+        ImGui::CreateContext();
+        ImGui::StyleColorsDark();
+
+        ImGuiIO &io = ImGui::GetIO();
+        io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+        io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+
+        ImGui_ImplGlfw_InitForOpenGL(m_window, true);
+        ImGui_ImplOpenGL3_Init(kImguiGlsl);
+
+        LOG_INFO("Dear ImGui initialized successfully");
+        spdlog::default_logger()->flush();
+    }
+
+
+    void Application::notifyScriptAssetListeners(const Assets::AssetChange &change) {
+        if (m_scriptAssetCallbacks.empty()) {
+            return;
+        }
+        for (auto &callback: m_scriptAssetCallbacks) {
+            callback(change);
+        }
+    }
+
+    void Application::pumpWatchers() {
+        ARTIFACT_ZONE();
+        if (m_assetWatcher) {
+            m_assetWatcher->pump();
+        }
+    }
 }

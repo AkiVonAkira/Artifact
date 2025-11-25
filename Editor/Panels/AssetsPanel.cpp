@@ -5,88 +5,92 @@
 #include <imgui_stdlib.h>
 
 #include "Artifact/Scene/SceneService.h"
-#include "Artifact/Scripting/ScriptAssetService.h"
+#include "Artifact/Scripting/ScriptManager.h"
 
 namespace Artifact::Editor {
-namespace {
-
-void DrawCreateScriptPopup(PanelContext& ctx) {
-    if (ImGui::BeginPopupModal("CreateLuaScriptPopup", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-        ImGui::TextUnformatted("New Lua script name");
-        ImGui::InputText("##LuaScriptName", &ctx.state.newScriptName);
-        ImGui::TextDisabled("Use letters, numbers, and '_' only");
-        if (!ctx.state.scriptCreationError.empty()) {
-            ImGui::TextColored(EditorLayer::kErrorColor, "%s", ctx.state.scriptCreationError.c_str());
-        }
-
-        if (ImGui::Button("Create", ImVec2(120.0f, 0.0f))) {
-            const std::string trimmed = ctx.layer.trimString(ctx.state.newScriptName);
-            if (ctx.layer.createLuaScript(trimmed)) {
-                ctx.layer.assignScriptToSelection(trimmed);
-                ctx.state.scriptCreationError.clear();
-                ctx.state.newScriptName.clear();
-                ImGui::CloseCurrentPopup();
-            }
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("Cancel", ImVec2(120.0f, 0.0f))) {
-            ctx.state.scriptCreationError.clear();
-            ctx.state.newScriptName.clear();
-            ImGui::CloseCurrentPopup();
-        }
-        ImGui::EndPopup();
-    }
-}
-
-class AssetsPanel : public IEditorPanel {
-public:
-    const char* name() const override {
-        return "Assets";
-    }
-
-    void draw(PanelContext& ctx) override {
-        const char* title = ctx.windowTitle ? ctx.windowTitle : "Assets";
-        if (!ImGui::Begin(title, ctx.closeable ? ctx.openFlag : nullptr)) {
-            ImGui::End();
-            return;
-        }
-
-        const float buttonSize = ImGui::GetFrameHeight();
-        bool open = ImGui::TreeNodeEx("Lua Scripts", ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_SpanAvailWidth);
-        ImGui::SameLine(ImGui::GetWindowContentRegionMax().x - buttonSize);
-        if (ImGui::SmallButton("+##CreateLuaScript")) {
-            ctx.state.newScriptName.clear();
-            ctx.state.scriptCreationError.clear();
-            ImGui::OpenPopup("CreateLuaScriptPopup");
-        }
-        DrawCreateScriptPopup(ctx);
-
-        if (open) {
-            const auto selected = ctx.layer.getSelectedEntity();
-            auto& registry = ctx.scene.context().registry;
-            const auto* scriptComponent = (selected != entt::null && registry.valid(selected)) ? registry.try_get<Scene::LuaScriptComponent>(selected) : nullptr;
-            for (const auto& asset : ctx.scripts.scripts()) {
-                const bool selectedScript = scriptComponent && scriptComponent->scriptName == asset.name;
-                ImGui::Selectable(asset.name.c_str(), selectedScript);
-                if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
-                    ctx.layer.assignScriptToSelection(asset.name);
+    namespace {
+        void DrawCreateScriptPopup(PanelContext &ctx) {
+            if (ImGui::BeginPopupModal("CreateLuaScriptPopup", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+                ImGui::TextUnformatted("New Lua script name");
+                ImGui::InputText("##LuaScriptName", &ctx.state.newScriptName);
+                ImGui::TextDisabled("Use letters, numbers, and '_' only");
+                if (!ctx.state.scriptCreationError.empty()) {
+                    ImGui::TextColored(EditorLayer::kErrorColor, "%s", ctx.state.scriptCreationError.c_str());
                 }
-                if (ImGui::BeginPopupContextItem()) {
-                    if (ImGui::MenuItem("Assign to selection")) {
-                        ctx.layer.assignScriptToSelection(asset.name);
+
+                if (ImGui::Button("Create", ImVec2(120.0f, 0.0f))) {
+                    const std::string trimmed = ctx.layer.trimString(ctx.state.newScriptName);
+                    if (ctx.layer.createLuaScript(trimmed)) {
+                        ctx.layer.assignScriptToSelection(trimmed);
+                        ctx.state.scriptCreationError.clear();
+                        ctx.state.newScriptName.clear();
+                        ImGui::CloseCurrentPopup();
                     }
-                    ImGui::EndPopup();
                 }
+                ImGui::SameLine();
+                if (ImGui::Button("Cancel", ImVec2(120.0f, 0.0f))) {
+                    ctx.state.scriptCreationError.clear();
+                    ctx.state.newScriptName.clear();
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::EndPopup();
             }
-            ImGui::TreePop();
         }
-        ImGui::End();
+
+        class AssetsPanel : public IEditorPanel {
+        public:
+            const char *name() const override {
+                return "Assets";
+            }
+
+            void draw(PanelContext &ctx) override {
+                const char *title = ctx.windowTitle ? ctx.windowTitle : "Assets";
+                if (!ImGui::Begin(title, ctx.closeable ? ctx.openFlag : nullptr)) {
+                    ImGui::End();
+                    return;
+                }
+
+                const float buttonSize = ImGui::GetFrameHeight();
+                bool open = ImGui::TreeNodeEx("Lua Scripts",
+                                              ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_SpanAvailWidth);
+                ImGui::SameLine(ImGui::GetWindowContentRegionMax().x - buttonSize);
+                if (ImGui::SmallButton("+##CreateLuaScript")) {
+                    ctx.state.newScriptName.clear();
+                    ctx.state.scriptCreationError.clear();
+                    ImGui::OpenPopup("CreateLuaScriptPopup");
+                }
+                DrawCreateScriptPopup(ctx);
+
+                if (open) {
+                    const auto selected = ctx.layer.getSelectedEntity();
+                    auto &registry = ctx.scene.context().registry;
+                    const auto *scriptComponent = (selected != entt::null && registry.valid(selected))
+                                                      ? registry.try_get<Scene::LuaScriptComponent>(selected)
+                                                      : nullptr;
+
+                    // Use ScriptManager singleton to get available scripts
+                    auto availableScripts = Scripting::ScriptManager::Instance().GetAvailableScripts();
+                    for (const auto &scriptName: availableScripts) {
+                        const bool selectedScript = scriptComponent && scriptComponent->scriptName == scriptName;
+                        ImGui::Selectable(scriptName.c_str(), selectedScript);
+                        if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
+                            ctx.layer.assignScriptToSelection(scriptName);
+                        }
+                        if (ImGui::BeginPopupContextItem()) {
+                            if (ImGui::MenuItem("Assign to selection")) {
+                                ctx.layer.assignScriptToSelection(scriptName);
+                            }
+                            ImGui::EndPopup();
+                        }
+                    }
+                    ImGui::TreePop();
+                }
+                ImGui::End();
+            }
+        };
     }
-};
-}
 
-PanelPtr CreateAssetsPanel() {
-    return std::make_unique<AssetsPanel>();
-}
-
+    PanelPtr CreateAssetsPanel() {
+        return std::make_unique<AssetsPanel>();
+    }
 }

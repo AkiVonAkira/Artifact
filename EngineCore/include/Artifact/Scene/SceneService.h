@@ -9,41 +9,49 @@
 #include "Artifact/Scene/SceneContext.h"
 
 namespace Artifact::Scripting {
-class ScriptAssetService;
+    class ScriptAssetService;
 }
 
 namespace Artifact::Scene {
+    class SceneService {
+    public:
+        using SelectionChangedCallback = std::function<void(entt::entity)>;
 
-class SceneService {
-public:
-    using SelectionChangedCallback = std::function<void(entt::entity)>;
+        SceneService();
 
-    SceneService();
-    ~SceneService();
+        ~SceneService();
 
-    SceneContext& context();
-    const SceneContext& context() const;
+        SceneContext &context();
 
-    entt::entity createEntity(const std::string& name);
-    entt::entity createDefaultCamera();
-    entt::entity createDefaultLuaActor();
-    entt::entity duplicateEntity(entt::entity source);
-    void destroyEntity(entt::entity entity);
-    void setParent(entt::entity entity, entt::entity parent);
+        const SceneContext &context() const;
 
-    void selectEntity(entt::entity entity);
-    entt::entity selectedEntity() const;
-    void onSelectionChanged(SelectionChangedCallback callback);
+        entt::entity createEntity(const std::string &name);
 
-    void resetScene();
-    void createDefaultScene(const Scripting::ScriptAssetService* scripts = nullptr);
+        entt::entity createDefaultCamera();
 
-private:
-    SceneContext m_scene;
-    entt::entity m_selected{entt::null};
-    SelectionChangedCallback m_selectionChanged;
-};
+        entt::entity createDefaultLuaActor();
 
-using SceneServicePtr = std::shared_ptr<SceneService>;
+        entt::entity duplicateEntity(entt::entity source);
 
+        void destroyEntity(entt::entity entity);
+
+        void setParent(entt::entity entity, entt::entity parent);
+
+        void selectEntity(entt::entity entity);
+
+        entt::entity selectedEntity() const;
+
+        void onSelectionChanged(SelectionChangedCallback callback);
+
+        void resetScene();
+
+        void createDefaultScene(const Scripting::ScriptAssetService *scripts = nullptr);
+
+    private:
+        SceneContext m_scene;
+        entt::entity m_selected{entt::null};
+        SelectionChangedCallback m_selectionChanged;
+    };
+
+    using SceneServicePtr = std::shared_ptr<SceneService>;
 } // namespace Artifact::Scene
