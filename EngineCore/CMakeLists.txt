@@ -1,83 +1,79 @@
-set(ENGINECORE_HEADERS
-    include/Artifact/Core/Application.h
-    include/Artifact/Core/Config.h
-    include/Artifact/Core/Instrumentation.h
-    include/Artifact/Core/PlayModeController.h
-    include/Artifact/Core/Paths.h
-    include/Artifact/Core/LoggingManager.h
-    include/Artifact/Core/Singleton.h
-    include/Artifact/Core/ManagerRegistry.h
-    include/Artifact/Core/Macros.h
-    include/Artifact/Core/LogManager.h
-    include/Artifact/Core/InputManager.h
-    include/Artifact/Core/TimeManager.h
-    include/Artifact/Assets/AssetWatcher.h
-    include/Artifact/Assets/Mesh.h
-    include/Artifact/Assets/MeshManager.h
-    include/Artifact/Assets/AssetManager.h
-    include/Artifact/Assets/AssetHandle.h
-    include/Artifact/Physics/PhysicsSystem.h
-    include/Artifact/Physics/PhysicsManager.h
-    include/Artifact/Rendering/Camera.h
-    include/Artifact/Rendering/CameraSystem.h
-    include/Artifact/Rendering/RenderManager.h
-    include/Artifact/Scene/ComponentRegistry.h
-    include/Artifact/Scene/Components.h
-    include/Artifact/Scene/Prefabs.h
-    include/Artifact/Scene/SceneContext.h
-    include/Artifact/Scene/SceneService.h
-    include/Artifact/Scene/SceneManager.h
-    include/Artifact/Scripting/LuaBindings.h
-    include/Artifact/Scripting/LuaContext.h
-    include/Artifact/Scripting/LuaRuntimeSystem.h
-    include/Artifact/Scripting/ScriptAssetService.h
-    include/Artifact/Scripting/ScriptManager.h
-    include/Artifact/UI/Overlay.h
-    include/Artifact/Core/GameplayTest.h
+﻿# EngineCore Library - Modern CMake with Auto-Discovery
+
+cmake_minimum_required(VERSION 3.21)
+
+# =============================================================================
+# Auto-discover source files
+# =============================================================================
+
+# Public headers (API that users of the library can include)
+file(GLOB_RECURSE ENGINECORE_PUBLIC_HEADERS
+    "${CMAKE_CURRENT_SOURCE_DIR}/Public/Artifact/*.h"
 )
 
-set(ENGINECORE_SOURCES
-    Assets/AssetWatcher.cpp
-    Assets/MeshManager.cpp
-    Assets/AssetManager.cpp
-    Core/Application.cpp
-    Core/Config.cpp
-    Core/PlayModeController.cpp
-    Core/Paths.cpp
-    Core/LoggingManager.cpp
-    Core/ManagerRegistry.cpp
-    Core/LogManager.cpp
-    Core/InputManager.cpp
-    Core/TimeManager.cpp
-    Physics/PhysicsSystem.cpp
-    Physics/PhysicsManager.cpp
-    Rendering/Camera.cpp
-    Rendering/CameraSystem.cpp
-    Rendering/RenderManager.cpp
-    Scene/ComponentRegistry.cpp
-    Scene/Prefabs.cpp
-    Scene/SceneContext.cpp
-    Scene/SceneService.cpp
-    Scene/SceneManager.cpp
-    Scripting/LuaBindings.cpp
-    Scripting/LuaContext.cpp
-    Scripting/LuaRuntimeSystem.cpp
-    Scripting/ScriptAssetService.cpp
-    Scripting/ScriptManager.cpp
-    UI/Overlay.cpp
-    Core/GameplayTestRegistry.cpp
+# Private headers (internal implementation details)
+file(GLOB_RECURSE ENGINECORE_PRIVATE_HEADERS
+    "${CMAKE_CURRENT_SOURCE_DIR}/Private/Artifact/*.h"
 )
 
-add_library(artifact_engine STATIC ${ENGINECORE_HEADERS} ${ENGINECORE_SOURCES})
+# Source files (all .cpp files)
+file(GLOB_RECURSE ENGINECORE_SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/Source/*.cpp"
+)
 
+# Print discovered files for debugging
+list(LENGTH ENGINECORE_PUBLIC_HEADERS PUBLIC_COUNT)
+list(LENGTH ENGINECORE_PRIVATE_HEADERS PRIVATE_COUNT)
+list(LENGTH ENGINECORE_SOURCES SOURCE_COUNT)
+
+message(STATUS "EngineCore: Found ${PUBLIC_COUNT} public headers")
+message(STATUS "EngineCore: Found ${PRIVATE_COUNT} private headers")
+message(STATUS "EngineCore: Found ${SOURCE_COUNT} source files")
+
+# Ensure we found files
+if(SOURCE_COUNT EQUAL 0)
+    message(FATAL_ERROR "No source files found in ${CMAKE_CURRENT_SOURCE_DIR}/Source")
+endif()
+
+# =============================================================================
+# Library target
+# =============================================================================
+
+add_library(artifact_engine STATIC
+    ${ENGINECORE_PUBLIC_HEADERS}
+    ${ENGINECORE_PRIVATE_HEADERS}
+    ${ENGINECORE_SOURCES}
+)
+
+# Alias for modern CMake
 add_library(Artifact::EngineCore ALIAS artifact_engine)
 
-target_include_directories(artifact_engine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+# =============================================================================
+# Include directories
+# =============================================================================
+
+target_include_directories(artifact_engine
+    PUBLIC
+        # Public API - available to consumers
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Public>
+        $<INSTALL_INTERFACE:include>
+    PRIVATE
+        # Private headers - only for this library
+        ${CMAKE_CURRENT_SOURCE_DIR}/Private
+)
+
+# =============================================================================
+# Compile definitions
+# =============================================================================
 
 target_compile_definitions(artifact_engine
     PUBLIC
         ARTIFACT_PROJECT_ROOT="${CMAKE_SOURCE_DIR}"
 )
+
+# =============================================================================
+# Link dependencies
+# =============================================================================
 
 target_link_libraries(artifact_engine
     PUBLIC
@@ -86,10 +82,54 @@ target_link_libraries(artifact_engine
         glm::glm
 )
 
+# =============================================================================
+# Compiler warnings
+# =============================================================================
+
 artifact_target_enable_warnings(artifact_engine)
+
+# =============================================================================
+# Tracy profiler support
+# =============================================================================
 
 if(ARTIFACT_ENABLE_TRACY)
     target_compile_definitions(artifact_engine PUBLIC TRACY_ENABLE=1)
 endif()
 
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${ENGINECORE_HEADERS} ${ENGINECORE_SOURCES})
+# =============================================================================
+# IDE support - organize files in folders
+# =============================================================================
+
+# Group headers by directory
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/Public
+    PREFIX "Public"
+    FILES ${ENGINECORE_PUBLIC_HEADERS}
+)
+
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/Private
+    PREFIX "Private"
+    FILES ${ENGINECORE_PRIVATE_HEADERS}
+)
+
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/Source
+    PREFIX "Source"
+    FILES ${ENGINECORE_SOURCES}
+)
+
+# =============================================================================
+# Installation rules (optional)
+# =============================================================================
+
+install(TARGETS artifact_engine
+    EXPORT ArtifactEngineTargets
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    RUNTIME DESTINATION bin
+    INCLUDES DESTINATION include
+)
+
+install(DIRECTORY Public/
+    DESTINATION include
+    FILES_MATCHING PATTERN "*.h"
+)
+

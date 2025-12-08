@@ -1,50 +1,105 @@
-find_package(Catch2 CONFIG REQUIRED)
+﻿# Editor Executable - Modern CMake with Auto-Discovery
 
-set(EDITOR_HEADERS
-    EditorLayer.h
-    EditorState.h
-    Panels/Panel.h
-    Panels/PanelFactories.h
-    Panels/PanelInstances.h
-    Panels/PanelRegistry.h
-    Viewport/EditorCameraController.h
+cmake_minimum_required(VERSION 3.21)
+
+# =============================================================================
+# Auto-discover source files
+# =============================================================================
+
+# Editor public headers (if plugins need them)
+file(GLOB_RECURSE EDITOR_PUBLIC_HEADERS
+    "${CMAKE_CURRENT_SOURCE_DIR}/Public/Artifact/Editor/*.h"
 )
 
-set(EDITOR_SOURCES
-    main.cpp
-    EditorLayer.cpp
-    Panels/AssetsPanel.cpp
-    Panels/ConsolePanel.cpp
-    Panels/HierarchyPanel.cpp
-    Panels/InspectorPanel.cpp
-    Panels/MainMenuPanel.cpp
-    Panels/ScenePanel.cpp
-    Panels/TestRunnerPanel.cpp
-    Panels/PanelInstances.cpp
-    Panels/PanelRegistry.cpp
-    Viewport/EditorCameraController.cpp
+# All editor source files
+file(GLOB_RECURSE EDITOR_SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/Source/*.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Source/*.h"  # Include local headers in subfolders
 )
 
-add_executable(artifact_editor ${EDITOR_HEADERS} ${EDITOR_SOURCES})
+# Print discovered files
+list(LENGTH EDITOR_PUBLIC_HEADERS PUBLIC_COUNT)
+list(LENGTH EDITOR_SOURCES SOURCE_COUNT)
 
-target_include_directories(artifact_editor PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/Panels
-    ${CMAKE_CURRENT_SOURCE_DIR}/Viewport
+message(STATUS "Editor: Found ${PUBLIC_COUNT} public headers")
+message(STATUS "Editor: Found ${SOURCE_COUNT} source files")
+
+# Ensure we found files
+if(SOURCE_COUNT EQUAL 0)
+    message(FATAL_ERROR "No source files found in ${CMAKE_CURRENT_SOURCE_DIR}/Source")
+endif()
+
+# =============================================================================
+# Executable target
+# =============================================================================
+
+add_executable(ArtifactEditor
+    ${EDITOR_PUBLIC_HEADERS}
+    ${EDITOR_SOURCES}
 )
 
-target_link_libraries(artifact_editor PRIVATE
-    Artifact::EngineCore
-    Catch2::Catch2
+# =============================================================================
+# Include directories
+# =============================================================================
+
+target_include_directories(ArtifactEditor
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Public>
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/Source
 )
 
-target_compile_definitions(artifact_editor PRIVATE ARTIFACT_IS_EDITOR=1)
+# =============================================================================
+# Link dependencies
+# =============================================================================
 
-artifact_target_enable_warnings(artifact_editor)
+target_link_libraries(ArtifactEditor
+    PRIVATE
+        Artifact::EngineCore
+        artifact_third_party
+)
 
-set_target_properties(artifact_editor PROPERTIES FOLDER Editor)
+# =============================================================================
+# Compiler warnings
+# =============================================================================
 
-add_custom_command(TARGET artifact_editor POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/Assets
-        $<TARGET_FILE_DIR:artifact_editor>/Assets)
+artifact_target_enable_warnings(ArtifactEditor)
+
+# =============================================================================
+# IDE support - organize files in folders
+# =============================================================================
+
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/Public
+    PREFIX "Public"
+    FILES ${EDITOR_PUBLIC_HEADERS}
+)
+
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/Source
+    PREFIX "Source"
+    FILES ${EDITOR_SOURCES}
+)
+
+# =============================================================================
+# Output directory
+# =============================================================================
+
+set_target_properties(ArtifactEditor PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Windows/${CMAKE_BUILD_TYPE}"
+    OUTPUT_NAME "ArtifactEditor"
+)
+
+# =============================================================================
+# Copy runtime dependencies (if needed)
+# =============================================================================
+
+# Copy DLLs on Windows
+if(WIN32)
+    add_custom_command(TARGET ArtifactEditor POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        $<TARGET_RUNTIME_DLLS:ArtifactEditor>
+        $<TARGET_FILE_DIR:ArtifactEditor>
+        COMMAND_EXPAND_LISTS
+        COMMENT "Copying runtime dependencies..."
+    )
+endif()
+
