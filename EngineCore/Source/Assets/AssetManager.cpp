@@ -223,11 +223,27 @@ namespace Artifact::Assets {
                 iss >> n.x >> n.y >> n.z;
                 normals.push_back(glm::normalize(n));
             } else if (token == "f") {
-                int faceIndex = 0;
+                // Collect all vertices in this face (supports triangles, quads, n-gons)
+                std::vector<MeshVertex> faceVertices;
                 std::string vertSpec;
-                while (iss >> vertSpec && faceIndex < 3) {
+
+                while (iss >> vertSpec) {
                     int v = 0, vt = 0, vn = 0;
-                    sscanf_s(vertSpec.c_str(), "%d/%d/%d", &v, &vt, &vn);
+
+                    // Parse vertex specification (supports v, v/vt, v/vt/vn, v//vn formats)
+                    if (sscanf_s(vertSpec.c_str(), "%d/%d/%d", &v, &vt, &vn) == 3) {
+                        // v/vt/vn
+                    } else if (sscanf_s(vertSpec.c_str(), "%d//%d", &v, &vn) == 2) {
+                        // v//vn
+                        vt = 0;
+                    } else if (sscanf_s(vertSpec.c_str(), "%d/%d", &v, &vt) == 2) {
+                        // v/vt
+                        vn = 0;
+                    } else if (sscanf_s(vertSpec.c_str(), "%d", &v) == 1) {
+                        // v only
+                        vt = 0;
+                        vn = 0;
+                    }
 
                     MeshVertex vertex{};
                     if (v > 0 && static_cast<size_t>(v) <= positions.size()) {
@@ -240,9 +256,24 @@ namespace Artifact::Assets {
                         vertex.texcoord = texcoords[vt - 1];
                     }
 
-                    mesh.indices.push_back(static_cast<uint32_t>(mesh.vertices.size()));
-                    mesh.vertices.push_back(vertex);
-                    ++faceIndex;
+                    faceVertices.push_back(vertex);
+                }
+
+                // Triangulate the face using fan triangulation
+                if (faceVertices.size() >= 3) {
+                    const uint32_t baseIndex = static_cast<uint32_t>(mesh.vertices.size());
+
+                    // Add all vertices
+                    for (const auto& vertex : faceVertices) {
+                        mesh.vertices.push_back(vertex);
+                    }
+
+                    // Create triangles using fan triangulation
+                    for (size_t i = 1; i + 1 < faceVertices.size(); ++i) {
+                        mesh.indices.push_back(baseIndex);         // First vertex
+                        mesh.indices.push_back(baseIndex + i);     // Current vertex
+                        mesh.indices.push_back(baseIndex + i + 1); // Next vertex
+                    }
                 }
             }
         }

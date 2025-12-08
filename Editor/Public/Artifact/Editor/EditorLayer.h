@@ -7,14 +7,15 @@
 #include <string>
 
 #include "EditorState.h"
+#include "EditorSceneManager.h"
+#include "EditorViewportManager.h"
 #include "Artifact/Assets/AssetWatcher.h"
-#include "Panels/PanelFactories.h"
+#include "Panels/Core/PanelFactories.h"
 #include "Artifact/Core/Config.h"
 #include "Artifact/Scene/Components.h"
 #include "Artifact/Scene/SceneContext.h"
-#include "Viewport/EditorCameraController.h"
-#include "Panels/PanelRegistry.h"
-#include "Panels/PanelInstances.h"
+#include "Panels/Core/PanelRegistry.h"
+#include "Panels/Core/PanelInstances.h"
 #include "Artifact/UI/Overlay.h"
 
 namespace Artifact::Core {
@@ -45,16 +46,6 @@ namespace Artifact::Editor {
 
         void drawStatusBarContent();
 
-        void renderSceneViewport(const ImVec2 &viewportSize);
-
-        void drawEditorCameraOverlay(const ImVec2 &viewportSize, bool viewportFocused, bool viewportHovered);
-
-        void drawCameraPreviewOverlay(const ImVec2 &viewportSize);
-
-        void drawSceneCameraFrustums(const ImVec2 &panelMin, const ImVec2 &panelSize);
-
-        void drawViewportInputHints(const ImVec2 &panelMin, const ImVec2 &panelSize, bool focused, bool hovered);
-
         void refreshScriptAssets(bool announce = true);
 
         void createDefaultScene();
@@ -65,15 +56,6 @@ namespace Artifact::Editor {
 
         std::string requestTextureAsset(const std::string &currentPath);
 
-        entt::entity addEntity(const std::string &name);
-
-        void duplicateEntity(entt::entity entity);
-
-        void removeSelectedEntity();
-
-        void selectEntity(entt::entity entity);
-
-        entt::entity getSelectedEntity() const;
 
         void assignScriptToSelection(const std::string &scriptName);
 
@@ -99,11 +81,20 @@ namespace Artifact::Editor {
         Scene::SceneService &sceneService() const; // TODO: Remove after panel updates
         Core::PlayModeController &playMode() const;
 
-        Rendering::Camera *activeViewportCamera();
-
         const std::vector<PanelDescriptor> &panelDescriptors() const;
 
         void openPanel(const std::string &id, bool forceNewInstance = false);
+
+        // Manager accessors
+        EditorSceneManager* sceneManager() { return m_sceneManager.get(); }
+        EditorViewportManager* viewportManager() { return m_viewportManager.get(); }
+
+        // Entity management convenience wrappers (delegate to EditorSceneManager)
+        entt::entity addEntity(const std::string& name);
+        void duplicateEntity(entt::entity entity);
+        void removeSelectedEntity();
+        void selectEntity(entt::entity entity);
+        entt::entity getSelectedEntity() const;
 
     private:
         void registerPanels();
@@ -122,7 +113,10 @@ namespace Artifact::Editor {
 
         EditorState m_state;
 
-        std::unique_ptr<EditorCameraController> m_editorCamera;
+        // Managers
+        std::unique_ptr<EditorSceneManager> m_sceneManager;
+        std::unique_ptr<EditorViewportManager> m_viewportManager;
+
         Rendering::Camera *m_runtimeCamera{nullptr};
         Scene::SceneContext m_runtimeScene;
         bool m_runtimeActive{false};

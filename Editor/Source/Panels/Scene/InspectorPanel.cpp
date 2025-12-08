@@ -1,4 +1,4 @@
-﻿#include "Panel.h"
+﻿#include "../Core/Panel.h"
 #include "Artifact/Editor/EditorLayer.h"
 
 #include <imgui.h>

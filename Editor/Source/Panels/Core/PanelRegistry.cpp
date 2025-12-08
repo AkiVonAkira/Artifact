@@ -10,7 +10,7 @@ namespace Artifact::Editor {
                 {"inspector", "Inspector", false, true, true, true, true, [] { return CreateInspectorPanel(); }},
                 {"scene", "Scene", false, true, true, true, true, [] { return CreateScenePanel(); }},
                 {"console", "Console", true, true, true, true, true, [] { return CreateConsolePanel(); }},
-                {"assets", "Assets", true, true, true, true, true, [] { return CreateAssetsPanel(); }}
+                {"asset-browser", "Asset Browser", true, true, true, true, true, [] { return CreateAssetBrowserPanel(); }}
             };
         }
     }
