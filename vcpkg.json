@@ -22,7 +22,6 @@
     },
     "imguizmo",
     "joltphysics",
-    "polyclipping",
     "luajit",
     "sol2",
     "spdlog",
@@ -30,5 +29,5 @@
     "tracy",
     "pkgconf"
   ],
-  "builtin-baseline": "3bbc2809d3625cb83a0d7cbd413bd6ad769d46d4"
+  "builtin-baseline": "01f602195983451bc83e72f4214af2cbc495aa94"
 }

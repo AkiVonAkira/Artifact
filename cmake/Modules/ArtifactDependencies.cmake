@@ -1,3 +1,5 @@
+cmake\Modules\ArtifactDependencies.cmake
+````````
 function(_artifact_pick_target output_var)
     foreach(candidate ${ARGN})
         if(TARGET ${candidate})
@@ -13,22 +15,35 @@ function(artifact_import_dependencies)
         return()
     endif()
 
+    message(STATUS "Importing Artifact dependencies...")
+
+    # GLFW - Window and input
     find_package(glfw3 CONFIG REQUIRED)
     _artifact_pick_target(_artifact_glfw_target glfw glfw3::glfw)
+    message(STATUS "  Found GLFW: ${_artifact_glfw_target}")
 
+    # GLAD - OpenGL loader
     find_package(glad CONFIG REQUIRED)
     _artifact_pick_target(_artifact_glad_target glad::glad glad)
+    message(STATUS "  Found GLAD: ${_artifact_glad_target}")
 
+    # ImGui - UI framework
     find_package(imgui CONFIG REQUIRED)
     _artifact_pick_target(_artifact_imgui_target imgui::imgui imgui)
+    message(STATUS "  Found ImGui: ${_artifact_imgui_target}")
 
+    # ImGuizmo - Gizmo controls
     find_package(imguizmo CONFIG REQUIRED)
     _artifact_pick_target(_artifact_imguizmo_target ImGuizmo::ImGuizmo ImGuizmo imguizmo::imguizmo)
+    message(STATUS "  Found ImGuizmo: ${_artifact_imguizmo_target}")
 
+    # ImGuiFileDialog - File browser
     find_package(imgui-file-dialog CONFIG QUIET)
     if(imgui-file-dialog_FOUND)
         _artifact_pick_target(_artifact_imgui_file_dialog_target ImGuiFileDialog::ImGuiFileDialog ImGuiFileDialog)
+        message(STATUS "  Found ImGuiFileDialog: ${_artifact_imgui_file_dialog_target}")
     else()
+        message(STATUS "  ImGuiFileDialog not found - fetching from source")
         include(FetchContent)
         set(_artifact_imgui_file_dialog_tag "v0.6.8")
         FetchContent_Declare(imgui_file_dialog
@@ -43,48 +58,94 @@ function(artifact_import_dependencies)
         target_include_directories(artifact_imgui_file_dialog PUBLIC ${imgui_file_dialog_SOURCE_DIR})
         target_link_libraries(artifact_imgui_file_dialog PRIVATE ${_artifact_imgui_target})
         set(_artifact_imgui_file_dialog_target artifact_imgui_file_dialog)
+        message(STATUS "  Built ImGuiFileDialog from source")
     endif()
 
+    # spdlog - Logging
     find_package(spdlog CONFIG REQUIRED)
     _artifact_pick_target(_artifact_spdlog_target spdlog::spdlog_header_only spdlog::spdlog spdlog)
+    message(STATUS "  Found spdlog: ${_artifact_spdlog_target}")
 
+    # GLM - Math library
     find_package(glm CONFIG REQUIRED)
     _artifact_pick_target(_artifact_glm_target glm::glm glm)
+    message(STATUS "  Found GLM: ${_artifact_glm_target}")
 
+    # EnTT - Entity component system
     find_package(entt CONFIG REQUIRED)
     _artifact_pick_target(_artifact_entt_target EnTT::EnTT entt)
+    message(STATUS "  Found EnTT: ${_artifact_entt_target}")
 
+    # Sol2 - Lua bindings
     find_package(sol2 CONFIG REQUIRED)
     _artifact_pick_target(_artifact_sol2_target sol2::sol2 sol2)
+    message(STATUS "  Found Sol2: ${_artifact_sol2_target}")
 
+    # LuaJIT - Lua runtime
     find_package(luajit CONFIG QUIET)
-    if(luajit_FOUND)
+    if(luajit_FOUND OR TARGET LuaJIT::LuaJIT OR TARGET luajit)
         _artifact_pick_target(_artifact_luajit_target LuaJIT::LuaJIT luajit)
+        message(STATUS "  Found LuaJIT: ${_artifact_luajit_target}")
     else()
-        find_package(PkgConfig REQUIRED)
-        pkg_check_modules(LuaJIT REQUIRED IMPORTED_TARGET luajit)
-        set(_artifact_luajit_target PkgConfig::LuaJIT)
-        message(STATUS "LuaJIT: falling back to pkg-config target PkgConfig::LuaJIT")
+        # Try PkgConfig as fallback (mainly for Linux)
+        if(NOT WIN32)
+            find_package(PkgConfig QUIET)
+            if(PkgConfig_FOUND)
+                pkg_check_modules(LuaJIT QUIET IMPORTED_TARGET luajit)
+                if(LuaJIT_FOUND)
+                    set(_artifact_luajit_target PkgConfig::LuaJIT)
+                    message(STATUS "  Found LuaJIT via pkg-config: ${_artifact_luajit_target}")
+                else()
+                    message(FATAL_ERROR "LuaJIT not found. Please install luajit via vcpkg or your system package manager.")
+                endif()
+            else()
+                message(FATAL_ERROR "LuaJIT not found and pkg-config unavailable. Please install luajit via vcpkg.")
+            endif()
+        else()
+            message(FATAL_ERROR "LuaJIT not found. Please ensure vcpkg has installed luajit correctly.")
+        endif()
     endif()
 
+    # EFSW - File watcher
     find_package(efsw CONFIG REQUIRED)
     _artifact_pick_target(_artifact_efsw_target efsw::efsw efsw)
+    message(STATUS "  Found EFSW: ${_artifact_efsw_target}")
 
+    # Tracy - Profiler
     find_package(tracy CONFIG REQUIRED)
     _artifact_pick_target(_artifact_tracy_target Tracy::TracyClient TracyClient)
+    message(STATUS "  Found Tracy: ${_artifact_tracy_target}")
 
+    # Box2D - 2D physics
     find_package(box2d CONFIG REQUIRED)
     _artifact_pick_target(_artifact_box2d_target box2d::box2d Box2D::Box2D box2d)
+    message(STATUS "  Found Box2D: ${_artifact_box2d_target}")
 
-    find_package(jolt CONFIG REQUIRED)
-    _artifact_pick_target(_artifact_jolt_target Jolt::Jolt jolt)
+    # Jolt - 3D physics
+    find_package(jolt CONFIG QUIET)
+    if(jolt_FOUND OR TARGET Jolt::Jolt OR TARGET jolt)
+        _artifact_pick_target(_artifact_jolt_target Jolt::Jolt jolt)
+        message(STATUS "  Found Jolt: ${_artifact_jolt_target}")
+    else()
+        find_package(JoltPhysics CONFIG QUIET)
+        if(JoltPhysics_FOUND)
+            _artifact_pick_target(_artifact_jolt_target Jolt::Jolt JoltPhysics::JoltPhysics)
+            message(STATUS "  Found JoltPhysics: ${_artifact_jolt_target}")
+        else()
+            message(FATAL_ERROR "Jolt Physics not found. Please install joltphysics via vcpkg.")
+        endif()
+    endif()
 
+    # Assimp - Asset importer
     find_package(assimp CONFIG REQUIRED)
     _artifact_pick_target(_artifact_assimp_target assimp::assimp assimp)
+    message(STATUS "  Found Assimp: ${_artifact_assimp_target}")
 
+    # STB - Image loading
     find_package(Stb REQUIRED)
     if(TARGET Stb::stb OR TARGET Stb::Stb)
         _artifact_pick_target(_artifact_stb_target Stb::stb Stb::Stb)
+        message(STATUS "  Found STB: ${_artifact_stb_target}")
     else()
         set(_artifact_stb_include_dir "${Stb_INCLUDE_DIRS}")
         if(NOT _artifact_stb_include_dir)
@@ -96,9 +157,10 @@ function(artifact_import_dependencies)
         add_library(artifact_stb_manual INTERFACE)
         target_include_directories(artifact_stb_manual INTERFACE ${_artifact_stb_include_dir})
         set(_artifact_stb_target artifact_stb_manual)
-        message(STATUS "Stb: using manual include interface with dirs ${_artifact_stb_include_dir}")
+        message(STATUS "  Found STB (manual): ${_artifact_stb_include_dir}")
     endif()
 
+    # Create unified third-party interface library
     add_library(artifact_third_party INTERFACE)
     target_link_libraries(artifact_third_party INTERFACE
         ${_artifact_glfw_target}
@@ -119,7 +181,46 @@ function(artifact_import_dependencies)
         ${_artifact_stb_target}
     )
 
+    # Platform-specific libraries
+    if(WIN32)
+        # Windows-specific system libraries
+        target_link_libraries(artifact_third_party INTERFACE
+            opengl32
+            ws2_32
+            winmm
+        )
+    elseif(APPLE)
+        # macOS-specific frameworks
+        find_library(COCOA_LIBRARY Cocoa REQUIRED)
+        find_library(IOKIT_LIBRARY IOKit REQUIRED)
+        find_library(COREVIDEO_LIBRARY CoreVideo REQUIRED)
+        find_library(OPENGL_LIBRARY OpenGL REQUIRED)
+        target_link_libraries(artifact_third_party INTERFACE
+            ${COCOA_LIBRARY}
+            ${IOKIT_LIBRARY}
+            ${COREVIDEO_LIBRARY}
+            ${OPENGL_LIBRARY}
+        )
+    elseif(UNIX)
+        # Linux-specific libraries
+        find_package(Threads REQUIRED)
+        find_package(X11 REQUIRED)
+        find_package(OpenGL REQUIRED)
+        target_link_libraries(artifact_third_party INTERFACE
+            Threads::Threads
+            ${X11_LIBRARIES}
+            ${OPENGL_LIBRARIES}
+            ${CMAKE_DL_LIBS}
+        )
+    endif()
+
+    # Tracy profiling support
     if(ARTIFACT_ENABLE_TRACY)
         target_compile_definitions(artifact_third_party INTERFACE TRACY_ENABLE=1)
+        message(STATUS "  Tracy profiling: ENABLED")
+    else()
+        message(STATUS "  Tracy profiling: DISABLED")
     endif()
+
+    message(STATUS "All dependencies imported successfully")
 endfunction()

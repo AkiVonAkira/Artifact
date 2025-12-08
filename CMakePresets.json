@@ -8,13 +8,14 @@
   "configurePresets": [
     {
       "name": "base",
-      "displayName": "Base",
-      "description": "Shared settings for editor-first builds.",
+      "displayName": "Base Configuration",
+      "description": "Shared settings for all configurations",
       "hidden": true,
-      "binaryDir": "${sourceDir}/build/${hostSystemName}/${presetName}",
-      "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+      "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": {
         "CMAKE_CXX_STANDARD": "23",
+        "CMAKE_CXX_STANDARD_REQUIRED": "ON",
+        "CMAKE_CXX_EXTENSIONS": "OFF",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
         "ARTIFACT_ENABLE_EDITOR": "ON",
         "ARTIFACT_ENABLE_RUNTIME": "OFF",
@@ -25,71 +26,173 @@
       }
     },
     {
+      "name": "vcpkg",
+      "displayName": "VCPKG Base",
+      "description": "Base configuration using vcpkg for dependencies",
+      "hidden": true,
+      "inherits": "base",
+      "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+      "condition": {
+        "type": "notEquals",
+        "lhs": "$env{VCPKG_ROOT}",
+        "rhs": ""
+      }
+    },
+    {
+      "name": "windows-base",
+      "displayName": "Windows Base",
+      "description": "Base configuration for Windows builds",
+      "hidden": true,
+      "inherits": "base",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "architecture": {
+        "value": "x64",
+        "strategy": "set"
+      },
+      "vendor": {
+        "microsoft.com/VisualStudioSettings/CMake/1.0": {
+          "hostOS": ["Windows"]
+        }
+      }
+    },
+    {
+      "name": "linux-base",
+      "displayName": "Linux Base",
+      "description": "Base configuration for Linux builds",
+      "hidden": true,
+      "inherits": "base",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "macos-base",
+      "displayName": "macOS Base",
+      "description": "Base configuration for macOS builds",
+      "hidden": true,
+      "inherits": "base",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      }
+    },
+    {
       "name": "ninja-base",
       "displayName": "Ninja Base",
-      "description": "Base configuration using Ninja (fast, works with most IDEs).",
-      "inherits": "base",
+      "description": "Base configuration using Ninja generator",
       "hidden": true,
       "generator": "Ninja"
     },
     {
-      "name": "Win64-Editor-Debug",
-      "displayName": "Win64 Editor Debug",
-      "description": "Debug build of the editor + tests using Ninja.",
-      "inherits": "ninja-base",
+      "name": "windows-debug",
+      "displayName": "Windows Debug",
+      "description": "Debug build for Windows using Ninja",
+      "inherits": ["windows-base", "ninja-base", "vcpkg"],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug"
       }
     },
     {
-      "name": "Win64-Editor-RelWithDebInfo",
-      "displayName": "Win64 Editor RelWithDebInfo",
-      "description": "RelWithDebInfo editor build using Ninja (Tracy off by default).",
-      "inherits": "ninja-base",
+      "name": "windows-release",
+      "displayName": "Windows Release",
+      "description": "Release build for Windows using Ninja",
+      "inherits": ["windows-base", "ninja-base", "vcpkg"],
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "ARTIFACT_ENABLE_TRACY": "OFF"
+      }
+    },
+    {
+      "name": "windows-relwithdebinfo",
+      "displayName": "Windows RelWithDebInfo",
+      "description": "RelWithDebInfo build for Windows using Ninja",
+      "inherits": ["windows-base", "ninja-base", "vcpkg"],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
         "ARTIFACT_ENABLE_TRACY": "OFF"
       }
     },
     {
-      "name": "Win64-Tests-Debug",
-      "displayName": "Win64 Tests Debug",
-      "description": "Debug build focused on the tests executable (runtime + tests enabled).",
-      "inherits": "ninja-base",
+      "name": "linux-debug",
+      "displayName": "Linux Debug",
+      "description": "Debug build for Linux using Ninja",
+      "inherits": ["linux-base", "ninja-base"],
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "ARTIFACT_ENABLE_RUNTIME": "ON",
-        "ARTIFACT_ENABLE_TESTS": "ON"
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "linux-release",
+      "displayName": "Linux Release",
+      "description": "Release build for Linux using Ninja",
+      "inherits": ["linux-base", "ninja-base"],
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "ARTIFACT_ENABLE_TRACY": "OFF"
+      }
+    },
+    {
+      "name": "macos-debug",
+      "displayName": "macOS Debug",
+      "description": "Debug build for macOS using Ninja",
+      "inherits": ["macos-base", "ninja-base"],
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "macos-release",
+      "displayName": "macOS Release",
+      "description": "Release build for macOS using Ninja",
+      "inherits": ["macos-base", "ninja-base"],
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "ARTIFACT_ENABLE_TRACY": "OFF"
       }
     }
   ],
   "buildPresets": [
     {
-      "name": "Build-Win64-Editor-Debug",
-      "displayName": "Build Win64 Editor Debug",
-      "configurePreset": "Win64-Editor-Debug"
+      "name": "windows-debug-build",
+      "displayName": "Build Windows Debug",
+      "configurePreset": "windows-debug"
     },
     {
-      "name": "Build-Win64-Editor-RelWithDebInfo",
-      "displayName": "Build Win64 Editor RelWithDebInfo",
-      "configurePreset": "Win64-Editor-RelWithDebInfo"
+      "name": "windows-release-build",
+      "displayName": "Build Windows Release",
+      "configurePreset": "windows-release"
     },
     {
-      "name": "Build-Win64-Tests-Debug",
-      "displayName": "Build Win64 Tests Debug",
-      "configurePreset": "Win64-Tests-Debug"
-    }
-  ],
-  "testPresets": [
-    {
-      "name": "Test-Win64-Editor-Debug",
-      "displayName": "Test Win64 Editor Debug",
-      "configurePreset": "Win64-Editor-Debug"
+      "name": "windows-relwithdebinfo-build",
+      "displayName": "Build Windows RelWithDebInfo",
+      "configurePreset": "windows-relwithdebinfo"
     },
     {
-      "name": "Test-Win64-Tests-Debug",
-      "displayName": "Test Win64 Tests Debug",
-      "configurePreset": "Win64-Tests-Debug"
+      "name": "linux-debug-build",
+      "displayName": "Build Linux Debug",
+      "configurePreset": "linux-debug"
+    },
+    {
+      "name": "linux-release-build",
+      "displayName": "Build Linux Release",
+      "configurePreset": "linux-release"
+    },
+    {
+      "name": "macos-debug-build",
+      "displayName": "Build macOS Debug",
+      "configurePreset": "macos-debug"
+    },
+    {
+      "name": "macos-release-build",
+      "displayName": "Build macOS Release",
+      "configurePreset": "macos-release"
     }
   ]
 }

@@ -80,26 +80,73 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/Source
 )
 
 # =============================================================================
-# Output directory
+# Output directory (cross-platform)
 # =============================================================================
 
+# Determine platform-specific output directory
+if(WIN32)
+    set(ARTIFACT_PLATFORM_DIR "Windows")
+elseif(APPLE)
+    set(ARTIFACT_PLATFORM_DIR "macOS")
+elseif(UNIX)
+    set(ARTIFACT_PLATFORM_DIR "Linux")
+else()
+    set(ARTIFACT_PLATFORM_DIR "Unknown")
+endif()
+
 set_target_properties(ArtifactEditor PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Windows/${CMAKE_BUILD_TYPE}"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/${ARTIFACT_PLATFORM_DIR}/${CMAKE_BUILD_TYPE}"
     OUTPUT_NAME "ArtifactEditor"
+    # For multi-config generators (Visual Studio, Xcode)
+    RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_BINARY_DIR}/bin/${ARTIFACT_PLATFORM_DIR}/Debug"
+    RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}/bin/${ARTIFACT_PLATFORM_DIR}/Release"
+    RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO "${CMAKE_BINARY_DIR}/bin/${ARTIFACT_PLATFORM_DIR}/RelWithDebInfo"
+    RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL "${CMAKE_BINARY_DIR}/bin/${ARTIFACT_PLATFORM_DIR}/MinSizeRel"
+)
+
+# Set working directory for debugging in Visual Studio
+set_target_properties(ArtifactEditor PROPERTIES
+    VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
 )
 
 # =============================================================================
-# Copy runtime dependencies (if needed)
+# Copy runtime dependencies
 # =============================================================================
 
 # Copy DLLs on Windows
 if(WIN32)
     add_custom_command(TARGET ArtifactEditor POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        $<TARGET_RUNTIME_DLLS:ArtifactEditor>
-        $<TARGET_FILE_DIR:ArtifactEditor>
+            $<TARGET_RUNTIME_DLLS:ArtifactEditor>
+            $<TARGET_FILE_DIR:ArtifactEditor>
         COMMAND_EXPAND_LISTS
-        COMMENT "Copying runtime dependencies..."
+        COMMENT "Copying runtime dependencies to output directory..."
     )
 endif()
+
+# On macOS, handle framework dependencies if needed
+if(APPLE)
+    set_target_properties(ArtifactEditor PROPERTIES
+        MACOSX_BUNDLE FALSE
+        BUILD_WITH_INSTALL_RPATH TRUE
+        INSTALL_RPATH "@executable_path/../lib"
+    )
+endif()
+
+# On Linux, set RPATH for shared libraries
+if(UNIX AND NOT APPLE)
+    set_target_properties(ArtifactEditor PROPERTIES
+        BUILD_WITH_INSTALL_RPATH TRUE
+        INSTALL_RPATH "\$ORIGIN/../lib"
+    )
+endif()
+
+# =============================================================================
+# Installation rules
+# =============================================================================
+
+install(TARGETS ArtifactEditor
+    RUNTIME DESTINATION bin
+    BUNDLE DESTINATION .
+)
 
