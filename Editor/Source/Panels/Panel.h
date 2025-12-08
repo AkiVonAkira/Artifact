@@ -2,7 +2,7 @@
 #include <memory>
 #include <vector>
 
-#include "EditorState.h"
+#include "Artifact/Editor/EditorState.h"
 
 namespace Artifact {
     namespace Scene {

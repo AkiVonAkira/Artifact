@@ -2,10 +2,6 @@
 
 #include "Artifact/Core/Config.h"
 #include "Artifact/UI/Overlay.h"
-#include "Artifact/Scene/SceneService.h"
-#include "Artifact/Scripting/ScriptAssetService.h"
-#include "Artifact/Scripting/LuaRuntimeSystem.h"
-#include "Artifact/Scripting/LuaBindings.h"
 #include "Artifact/Core/PlayModeController.h"
 
 #include <functional>
@@ -27,6 +23,10 @@ namespace Artifact::Scripting {
 namespace Artifact::Assets {
     class AssetWatcher;
     struct AssetChange;
+}
+
+namespace Artifact::Scene {
+    class SceneService;
 }
 
 namespace Artifact::Core {
@@ -82,8 +82,6 @@ namespace Artifact::Core {
 
         void initializeDearImgui();
 
-        void notifyScriptAssetListeners(const Assets::AssetChange &change);
-
         void pumpWatchers();
 
         ApplicationCreateInfo m_info{};
@@ -93,7 +91,6 @@ namespace Artifact::Core {
 
         std::unique_ptr<Assets::AssetWatcher> m_assetWatcher;
         std::unique_ptr<UI::Overlay> m_overlay;
-        std::vector<ScriptAssetCallback> m_scriptAssetCallbacks;
         std::unique_ptr<Scene::SceneService> m_sceneService;
         std::unique_ptr<PlayModeController> m_playModeController;
         std::unique_ptr<LoggingManager> m_loggingManager;

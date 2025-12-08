@@ -1,11 +1,9 @@
-#include "EditorLayer.h"
-
+#include "Artifact/Editor/EditorLayer.h"
 #include "Artifact/Core/Application.h"
 #include "Artifact/Core/LogManager.h"
 #include "Artifact/Core/InputManager.h"
 #include "Artifact/Core/TimeManager.h"
 #include "Artifact/Rendering/RenderManager.h"
-#include "Artifact/Scripting/ScriptManager.h"
 #include "Artifact/Scene/SceneManager.h"
 #include "Artifact/Scene/SceneService.h"
 #include "Artifact/Core/PlayModeController.h"
@@ -55,20 +53,21 @@ namespace Artifact::Editor {
             return true;
         }
 
-        void InvokeLifecycle(const sol::protected_function &fn,
-                             const sol::table &instance,
-                             const char *label,
-                             std::optional<float> delta = std::nullopt) {
-            if (!fn.valid()) {
-                return;
-            }
-
-            sol::protected_function_result result = delta.has_value() ? fn(instance, *delta) : fn(instance);
-            if (!result.valid()) {
-                sol::error err = result;
-                spdlog::error("[Lua] {} failed: {}", label, err.what());
-            }
-        }
+        // Lua scripting has been removed from the engine
+        // void InvokeLifecycle(const sol::protected_function &fn,
+        //                      const sol::table &instance,
+        //                      const char *label,
+        //                      std::optional<float> delta = std::nullopt) {
+        //     if (!fn.valid()) {
+        //         return;
+        //     }
+        //
+        //     sol::protected_function_result result = delta.has_value() ? fn(instance, *delta) : fn(instance);
+        //     if (!result.valid()) {
+        //         sol::error err = result;
+        //         spdlog::error("[Lua] {} failed: {}", label, err.what());
+        //     }
+        // }
     } // namespace
 
 
@@ -84,19 +83,6 @@ namespace Artifact::Editor {
         LOG_INFO("EditorLayer: Creating editor camera...");
         m_editorCamera = std::make_unique<EditorCameraController>(m_state);
 
-        // Bindings are already registered by Application, just set the registry
-        LOG_INFO("EditorLayer: Setting script registry...");
-        if (m_sceneService) {
-            Scripting::ScriptManager::Instance().SetRegistry(&m_sceneService->context().registry);
-        }
-
-        LOG_INFO("EditorLayer: Refreshing script assets...");
-        refreshScriptAssets();
-
-        LOG_INFO("EditorLayer: Registering script asset listener...");
-        m_application.registerScriptAssetListener([this](const Assets::AssetChange &change) {
-            handleScriptAssetChange(change);
-        });
 
         LOG_INFO("EditorLayer: Creating default scene...");
         createDefaultScene();
@@ -275,15 +261,7 @@ namespace Artifact::Editor {
             if (!m_playMode->paused()) {
                 m_state.sceneClock += deltaTime;
             }
-            if (m_sceneService) {
-                const bool shouldUpdate = m_playMode->state() == Core::PlayModeController::State::Playing && !m_playMode
-                                          ->paused();
-                if (m_runtimeActive) {
-                    Scripting::ScriptManager::Instance().Tick(m_runtimeScene.registry, deltaTime, shouldUpdate);
-                } else {
-                    Scripting::ScriptManager::Instance().Tick(m_sceneService->context().registry, deltaTime, shouldUpdate);
-                }
-            }
+            // Script update removed - no longer using Lua scripting
         }
 
         Rendering::Camera *camera = activeViewportCamera();
@@ -308,7 +286,7 @@ namespace Artifact::Editor {
 
         const uint32_t texture = Rendering::RenderManager::Instance().SceneColorTexture();
         if (texture != 0) {
-            ImGui::Image(texture, viewportSize, ImVec2(0, 1), ImVec2(1, 0));
+            ImGui::Image(reinterpret_cast<ImTextureID>(static_cast<uintptr_t>(texture)), viewportSize, ImVec2(0, 1), ImVec2(1, 0));
             drawEditorCameraOverlay(viewportSize, viewportFocused, viewportHovered);
             drawCameraPreviewOverlay(viewportSize);
         }
@@ -475,7 +453,7 @@ namespace Artifact::Editor {
                           ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
         ImGui::TextUnformatted("Camera Preview");
         ImGui::Separator();
-        const ImTextureID previewTextureId = previewTexture;
+        const ImTextureID previewTextureId = reinterpret_cast<ImTextureID>(static_cast<uintptr_t>(previewTexture));
         ImGui::Image(previewTextureId, previewSize, ImVec2(0, 1), ImVec2(1, 0));
         ImGui::Separator();
         ImGui::Text("FOV: %.1f", primaryCam->camera.fieldOfView());
@@ -485,14 +463,14 @@ namespace Artifact::Editor {
     }
 
     void EditorLayer::refreshScriptAssets(bool announce) {
-        Scripting::ScriptManager::Instance().RefreshScripts(announce);
+        // Script asset refresh removed - no longer using Lua scripting
     }
 
     void EditorLayer::createDefaultScene() {
         if (!m_sceneService) {
             return;
         }
-        m_sceneService->createDefaultScene(Scripting::ScriptManager::Instance().GetAssetService());
+        m_sceneService->createDefaultScene();
     }
 
     entt::entity EditorLayer::addEntity(const std::string &name) {
@@ -537,22 +515,15 @@ namespace Artifact::Editor {
             const bool changedScript = script->scriptName != scriptName;
             script->scriptName = scriptName;
             if (changedScript) {
-                if (const auto *asset = findScriptByName(scriptName)) {
-                    synchronizeScriptFields(*script, *asset);
-                } else {
-                    script->serializedFields.clear();
-                }
-                Scripting::ScriptManager::Instance().OnScriptAssigned(selected, *script);
+                // Lua scripting removed - just clear fields
+                script->serializedFields.clear();
             }
             const auto *nameComponent = registry.try_get<Scene::NameComponent>(selected);
             const std::string entityName = nameComponent ? nameComponent->name : "Entity";
-            pushConsoleMessage("Assigned script '" + scriptName + "' to " + entityName);
+            pushConsoleMessage("Assigned script '" + scriptName + "' to " + entityName + " (scripting disabled)", spdlog::level::warn);
         }
     }
 
-    const Scripting::ScriptAsset *EditorLayer::findScriptByName(const std::string &name) const {
-        return Scripting::ScriptManager::Instance().FindScript(name);
-    }
 
     void EditorLayer::pushConsoleMessage(const std::string &message, spdlog::level::level_enum level) {
         spdlog::log(level, "{}", message);
@@ -563,7 +534,9 @@ namespace Artifact::Editor {
             return;
         }
         LOG_INFO("> {}", command);
-        Scripting::ScriptManager::Instance().ExecuteString(command);
+        // Lua scripting removed - ScriptManager no longer exists
+        // Scripting::ScriptManager::Instance().ExecuteString(command);
+        pushConsoleMessage("Lua scripting has been removed from the engine", spdlog::level::warn);
     }
 
     void EditorLayer::enterPlayMode() {
@@ -602,11 +575,12 @@ namespace Artifact::Editor {
         }
         m_playMode->step();
         pushConsoleMessage("Stepped one frame");
-        if (m_runtimeActive) {
-            Scripting::ScriptManager::Instance().Tick(m_runtimeScene.registry, 1.0f / 60.0f, true);
-        } else {
-            Scripting::ScriptManager::Instance().Tick(m_sceneService->context().registry, 1.0f / 60.0f, true);
-        }
+        // Script tick removed - no longer using Lua scripting
+        // if (m_runtimeActive) {
+        //     Scripting::ScriptManager::Instance().Tick(m_runtimeScene.registry, 1.0f / 60.0f, true);
+        // } else {
+        //     Scripting::ScriptManager::Instance().Tick(m_sceneService->context().registry, 1.0f / 60.0f, true);
+        // }
     }
 
     void EditorLayer::requestExit() {
@@ -658,48 +632,24 @@ namespace Artifact::Editor {
     }
 
     void EditorLayer::handleScriptAssetChange(const Assets::AssetChange &change) {
-        refreshScriptAssets(false);
+        // Script synchronization removed - no longer using Lua scripting
         const std::string scriptName = change.path.stem().string();
         switch (change.type) {
             case Assets::AssetChange::Type::Added:
-                pushConsoleMessage("Lua script added: " + scriptName);
+                pushConsoleMessage("Lua script added: " + scriptName + " (scripting disabled)", spdlog::level::info);
                 break;
             case Assets::AssetChange::Type::Modified:
-                pushConsoleMessage("Lua script updated: " + scriptName);
+                pushConsoleMessage("Lua script updated: " + scriptName + " (scripting disabled)", spdlog::level::info);
                 break;
-            case Assets::AssetChange::Type::Moved: {
-                const std::string oldName = change.previousPath.empty()
-                                                ? std::string{}
-                                                : change.previousPath.stem().string();
-                if (!oldName.empty() && oldName != scriptName) {
-                    pushConsoleMessage("Lua script renamed: " + oldName + " -> " + scriptName);
-                } else {
-                    pushConsoleMessage("Lua script moved: " + scriptName);
-                }
-                break;
-            }
             case Assets::AssetChange::Type::Removed:
                 pushConsoleMessage("Lua script removed: " + scriptName, spdlog::level::warn);
+                break;
+            case Assets::AssetChange::Type::Moved:
+                pushConsoleMessage("Lua script moved: " + scriptName + " (scripting disabled)", spdlog::level::info);
                 break;
         }
     }
 
-    void EditorLayer::synchronizeSceneScripts() {
-        if (!m_sceneService) {
-            return;
-        }
-        auto &registry = m_sceneService->context().registry;
-        auto scriptsView = registry.view<Scene::LuaScriptComponent>();
-        for (auto entity: scriptsView) {
-            auto &scriptComponent = scriptsView.get<Scene::LuaScriptComponent>(entity);
-            if (const auto *asset = findScriptByName(scriptComponent.scriptName)) {
-                synchronizeScriptFields(scriptComponent, *asset);
-                Scripting::ScriptManager::Instance().OnScriptAssigned(entity, scriptComponent);
-            } else if (!scriptComponent.scriptName.empty()) {
-                scriptComponent.serializedFields.clear();
-            }
-        }
-    }
 
     void EditorLayer::onScriptPropertiesModified(entt::entity entity) {
         if (!m_sceneService) {
@@ -713,52 +663,10 @@ namespace Artifact::Editor {
         if (!script) {
             return;
         }
-        Scripting::ScriptManager::Instance().OnScriptPropertiesChanged(entity, *script);
+        // Lua scripting removed - ScriptManager no longer exists
+        // Scripting::ScriptManager::Instance().OnScriptPropertiesChanged(entity, *script);
     }
 
-    void EditorLayer::synchronizeScriptFields(Scene::LuaScriptComponent &component,
-                                              const Scripting::ScriptAsset &asset) const {
-        std::unordered_map<std::string, Scene::LuaPropertyValue> nextFields;
-        nextFields.reserve(asset.properties.size());
-        for (const auto &definition: asset.properties) {
-            auto existing = component.serializedFields.find(definition.name);
-            switch (definition.type) {
-                case Scripting::ScriptPropertyType::Boolean: {
-                    bool value = definition.boolDefault;
-                    if (existing != component.serializedFields.end() && std::holds_alternative<
-                            bool>(existing->second)) {
-                        value = std::get<bool>(existing->second);
-                    }
-                    nextFields.emplace(definition.name, value);
-                    break;
-                }
-                case Scripting::ScriptPropertyType::String: {
-                    std::string value = definition.stringDefault;
-                    if (existing != component.serializedFields.end() && std::holds_alternative<std::string>(
-                            existing->second)) {
-                        value = std::get<std::string>(existing->second);
-                    }
-                    nextFields.emplace(definition.name, value);
-                    break;
-                }
-                case Scripting::ScriptPropertyType::Number:
-                default: {
-                    double value = definition.numberDefault;
-                    if (existing != component.serializedFields.end()) {
-                        if (std::holds_alternative<double>(existing->second)) {
-                            value = std::get<double>(existing->second);
-                        } else if (std::holds_alternative<bool>(existing->second)) {
-                            value = std::get<bool>(existing->second) ? 1.0 : 0.0;
-                        }
-                    }
-                    nextFields.emplace(definition.name, value);
-                    break;
-                }
-            }
-        }
-
-        component.serializedFields = std::move(nextFields);
-    }
 
     bool EditorLayer::createLuaScript(const std::string &scriptName) {
         if (!IsValidScriptName(scriptName)) {
@@ -766,21 +674,26 @@ namespace Artifact::Editor {
             return false;
         }
 
-        // TODO: ScriptManager needs createScript method
-        auto *assetService = Scripting::ScriptManager::Instance().GetAssetService();
-        if (!assetService) {
-            return false;
-        }
+        // Lua scripting removed - ScriptManager no longer exists
+        m_state.scriptCreationError = "Lua scripting has been removed from the engine";
+        pushConsoleMessage(m_state.scriptCreationError, spdlog::level::warn);
+        return false;
 
-        std::string error;
-        if (!assetService->createScript(scriptName, error)) {
-            m_state.scriptCreationError = error;
-            return false;
-        }
-
-        m_state.scriptCreationError.clear();
-        LOG_INFO("Created Lua script '{}'", scriptName);
-        return true;
+        // // TODO: ScriptManager needs createScript method
+        // auto *assetService = Scripting::ScriptManager::Instance().GetAssetService();
+        // if (!assetService) {
+        //     return false;
+        // }
+        //
+        // std::string error;
+        // if (!assetService->createScript(scriptName, error)) {
+        //     m_state.scriptCreationError = error;
+        //     return false;
+        // }
+        //
+        // m_state.scriptCreationError.clear();
+        // LOG_INFO("Created Lua script '{}'", scriptName);
+        // return true;
     }
 
     Rendering::Camera *EditorLayer::activeViewportCamera() {

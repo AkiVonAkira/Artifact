@@ -2,7 +2,7 @@
 #include <imgui.h>
 #include <algorithm>
 #include "Artifact/Rendering/Camera.h"
-#include "EditorState.h"
+#include "Artifact/Editor/EditorState.h"
 #include "Artifact/Core/InputManager.h"
 
 Artifact::Editor::EditorCameraController::EditorCameraController(EditorState &state)

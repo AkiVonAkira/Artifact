@@ -7,8 +7,8 @@
 #include "Artifact/Assets/AssetWatcher.h"
 #include "Artifact/Assets/AssetManager.h"
 #include "Artifact/Scene/SceneManager.h"
+#include "Artifact/Scene/SceneService.h"
 #include "Artifact/Rendering/RenderManager.h"
-#include "Artifact/Scripting/ScriptManager.h"
 #include "Artifact/Physics/PhysicsManager.h"
 #include "Artifact/Core/Config.h"
 #include "Artifact/Core/Instrumentation.h"
@@ -87,32 +87,6 @@ namespace Artifact::Core {
         LOG_INFO("PhysicsManager initialized successfully");
         spdlog::default_logger()->flush();
 
-        // Initialize ScriptManager with paths
-        LOG_INFO("Initializing ScriptManager with paths...");
-        spdlog::default_logger()->flush();
-        Scripting::ScriptManager::Instance().Initialize(m_runtimeConfig.paths.rawAssets);
-
-        LOG_INFO("Registering input bindings...");
-        spdlog::default_logger()->flush();
-        Scripting::ScriptManager::Instance().RegisterInputBindings([this](int key) {
-            return isKeyDown(key);
-        });
-
-        LOG_INFO("Registering time bindings...");
-        spdlog::default_logger()->flush();
-        Scripting::ScriptManager::Instance().RegisterTimeBindings();
-
-        LOG_INFO("Registering entity bindings...");
-        spdlog::default_logger()->flush();
-        Scripting::ScriptManager::Instance().RegisterEntityBindings();
-
-        LOG_INFO("Refreshing scripts...");
-        spdlog::default_logger()->flush();
-        Scripting::ScriptManager::Instance().RefreshScripts(true);
-
-        LOG_INFO("ScriptManager fully initialized");
-        spdlog::default_logger()->flush();
-
         LOG_INFO("Creating AssetWatcher...");
         spdlog::default_logger()->flush();
         m_assetWatcher = std::make_unique<Assets::AssetWatcher>();
@@ -131,33 +105,16 @@ namespace Artifact::Core {
         LOG_INFO("SceneService created successfully");
         spdlog::default_logger()->flush();
 
-        // Use singleton SceneManager and ScriptManager (old sceneService kept for compatibility)
-        LOG_INFO("Creating default scene...");
-        spdlog::default_logger()->flush();
-        Scene::SceneManager::Instance().CreateDefaultScene(Scripting::ScriptManager::Instance().GetAssetService());
-        LOG_INFO("Default scene created successfully");
-        spdlog::default_logger()->flush();
-
         LOG_INFO("Creating PlayModeController...");
         spdlog::default_logger()->flush();
         m_playModeController = std::make_unique<PlayModeController>();
         LOG_INFO("PlayModeController created successfully");
         spdlog::default_logger()->flush();
 
-        // Set registry for script bindings
-        if (m_sceneService) {
-            Scripting::ScriptManager::Instance().SetRegistry(&m_sceneService->context().registry);
-        }
-
         if (m_assetWatcher) {
             m_assetWatcher->watch(m_runtimeConfig.paths.rawAssets, [this](const Assets::AssetChange &change) {
                 const auto ext = change.path.extension().string();
-                if (ext == ".lua") {
-                    if (change.type != Assets::AssetChange::Type::Removed) {
-                        Scripting::ScriptManager::Instance().EnqueueReload(change.path.stem().string());
-                    }
-                    notifyScriptAssetListeners(change);
-                }
+                // TODO: handle file extensions here
             });
 
             m_assetWatcher->watch(m_runtimeConfig.paths.shaderRoot, [](const Assets::AssetChange &change) {
@@ -208,7 +165,6 @@ namespace Artifact::Core {
             Assets::AssetManager::Instance().Update();
 
             pumpWatchers();
-            Scripting::ScriptManager::Instance().PollReloads();
 
             ImGui_ImplOpenGL3_NewFrame();
             ImGui_ImplGlfw_NewFrame();
@@ -289,13 +245,6 @@ namespace Artifact::Core {
         return m_runtimeConfig;
     }
 
-    void Application::registerScriptAssetListener(ScriptAssetCallback callback) {
-        if (!callback) {
-            return;
-        }
-        m_scriptAssetCallbacks.emplace_back(std::move(callback));
-    }
-
     void Application::initializeWindow() {
         ARTIFACT_ZONE();
         LOG_INFO("Initializing GLFW...");
@@ -357,15 +306,6 @@ namespace Artifact::Core {
         spdlog::default_logger()->flush();
     }
 
-
-    void Application::notifyScriptAssetListeners(const Assets::AssetChange &change) {
-        if (m_scriptAssetCallbacks.empty()) {
-            return;
-        }
-        for (auto &callback: m_scriptAssetCallbacks) {
-            callback(change);
-        }
-    }
 
     void Application::pumpWatchers() {
         ARTIFACT_ZONE();

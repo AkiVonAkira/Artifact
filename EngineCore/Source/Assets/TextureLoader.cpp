@@ -7,6 +7,8 @@
 
 #include <glad/glad.h>
 
+#include "Artifact/Core/Macros.h"
+
 namespace Artifact::Assets {
 
     TextureData::~TextureData() {

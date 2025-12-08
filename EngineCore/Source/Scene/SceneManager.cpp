@@ -1,7 +1,6 @@
 ﻿#include "Artifact/Scene/SceneManager.h"
 #include "Artifact/Scene/Prefabs.h"
 #include "Artifact/Scene/ComponentRegistry.h"
-#include "Artifact/Scripting/ScriptAssetService.h"
 #include "Artifact/Core/LogManager.h"
 #include "Artifact/Core/Macros.h"
 
@@ -166,19 +165,12 @@ namespace Artifact::Scene {
         m_selected = entt::null;
     }
 
-    void SceneManager::CreateDefaultScene(const Scripting::ScriptAssetService *scripts) {
+    void SceneManager::CreateDefaultScene() {
         ResetScene();
         entt::entity camera = CreateDefaultCamera();
         entt::entity actor = CreateDefaultLuaActor();
 
-        if (scripts && !scripts->scripts().empty()) {
-            if (auto *script = m_scene.registry.try_get<LuaScriptComponent>(camera)) {
-                script->scriptName = scripts->scripts().front().name;
-            }
-            if (auto *script = m_scene.registry.try_get<LuaScriptComponent>(actor)) {
-                script->scriptName = scripts->scripts().front().name;
-            }
-        }
+        // Lua scripting removed - no script assignment needed
 
         SelectEntity(actor);
     }

@@ -4,7 +4,6 @@
 #include <unordered_map>
 
 #include "Artifact/Scene/Prefabs.h"
-#include "Artifact/Scripting/ScriptAssetService.h"
 #include "Artifact/Scene/ComponentRegistry.h"
 
 namespace Artifact::Scene {
@@ -132,19 +131,12 @@ namespace Artifact::Scene {
         m_selected = entt::null;
     }
 
-    void SceneService::createDefaultScene(const Scripting::ScriptAssetService *scripts) {
+    void SceneService::createDefaultScene() {
         resetScene();
         entt::entity camera = createDefaultCamera();
         entt::entity actor = createDefaultLuaActor();
 
-        if (scripts && !scripts->scripts().empty()) {
-            if (auto *script = m_scene.registry.try_get<LuaScriptComponent>(camera)) {
-                script->scriptName = scripts->scripts().front().name;
-            }
-            if (auto *script = m_scene.registry.try_get<LuaScriptComponent>(actor)) {
-                script->scriptName = scripts->scripts().front().name;
-            }
-        }
+        // Lua scripting removed - no script assignment needed
 
         selectEntity(actor);
     }

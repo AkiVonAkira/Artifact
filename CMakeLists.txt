@@ -3,73 +3,73 @@ cmake_minimum_required(VERSION 3.24)
 project(Artifact VERSION 0.1.0 LANGUAGES CXX C)
 
 # =============================================================================
-# Platform detection and compiler setup
+# Build type setup (for single-config generators like Ninja/Makefiles)
 # =============================================================================
-
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-    message(STATUS "Setting build type to 'Debug' as none was specified.")
-    set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build." FORCE)
+    message(STATUS "Setting build type to 'Debug' as none was specified")
+    set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build" FORCE)
     set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
 
-# Ensure MSVC linker matches the compiler toolset (avoid mixing 14.50 object code with 14.44 linker/libs)
-if(MSVC AND CMAKE_CXX_COMPILER)
-    get_filename_component(_cl_dir "${CMAKE_CXX_COMPILER}" DIRECTORY)
-    if(EXISTS "${_cl_dir}/link.exe")
-        # Force linker to same toolset version as compiler
-        set(CMAKE_LINKER "${_cl_dir}/link.exe" CACHE FILEPATH "MSVC linker" FORCE)
-    endif()
-endif()
+# =============================================================================
+# CMake policies for consistent behavior
+# =============================================================================
+cmake_policy(SET CMP0077 NEW)  # option() honors normal variables
 
 # =============================================================================
-# Module path setup
+# Module path
 # =============================================================================
-
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
 
 # =============================================================================
-# Include configuration modules
+# Project options (must come before dependencies)
 # =============================================================================
-
 include(ArtifactOptions)
-include(ArtifactWarnings)
-include(ArtifactDependencies)
-
 artifact_configure_options()
-artifact_import_dependencies()
+
+# =============================================================================
+# Compiler requirements and warnings
+# =============================================================================
+include(ArtifactWarnings)
 artifact_enable_warnings()
 
 # =============================================================================
-# Add subdirectories
+# Third-party dependencies (vcpkg or system packages)
+# =============================================================================
+include(ArtifactDependencies)
+artifact_import_dependencies()
+
+# =============================================================================
+# Subdirectories
 # =============================================================================
 
-# Core engine (required)
+# Core engine library (always required)
 add_subdirectory(EngineCore)
 
-# Plugins (optional, only if directory exists)
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Plugins/CMakeLists.txt")
-    add_subdirectory(Plugins)
-endif()
-
-# Editor (optional)
-if(ARTIFACT_ENABLE_EDITOR AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Editor/CMakeLists.txt")
+# Editor executable (optional)
+if(ARTIFACT_ENABLE_EDITOR)
     add_subdirectory(Editor)
 endif()
 
-# Runtime (optional)
-if(ARTIFACT_ENABLE_RUNTIME AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Runtime/CMakeLists.txt")
+# Runtime executable (optional)
+if(ARTIFACT_ENABLE_RUNTIME)
     add_subdirectory(Runtime)
 endif()
 
 # Tests (optional)
-if(ARTIFACT_ENABLE_TESTS AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/CMakeLists.txt")
+if(ARTIFACT_ENABLE_TESTS)
     enable_testing()
     add_subdirectory(tests)
 endif()
 
 # Tools (optional)
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Tools/CMakeLists.txt")
+if(ARTIFACT_ENABLE_TOOLS)
     add_subdirectory(Tools)
+endif()
+
+# Plugins (optional)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Plugins/CMakeLists.txt")
+    add_subdirectory(Plugins)
 endif()
 
 # Games (optional)
@@ -78,27 +78,32 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Games/CMakeLists.txt")
 endif()
 
 # Packaging (optional)
-if(ARTIFACT_BUILD_PACKAGING AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Packaging/CMakeLists.txt")
+if(ARTIFACT_BUILD_PACKAGING)
     add_subdirectory(Packaging)
 endif()
 
 # =============================================================================
-# Status summary
+# Configuration summary
 # =============================================================================
-
-message(STATUS "=================================================================")
-message(STATUS "Artifact Configuration Summary")
-message(STATUS "=================================================================")
-message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
-message(STATUS "C++ Standard: ${CMAKE_CXX_STANDARD}")
-message(STATUS "Platform: ${CMAKE_SYSTEM_NAME}")
-message(STATUS "Compiler: ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
 message(STATUS "")
-message(STATUS "Build Options:")
-message(STATUS "  ARTIFACT_ENABLE_EDITOR:   ${ARTIFACT_ENABLE_EDITOR}")
-message(STATUS "  ARTIFACT_ENABLE_RUNTIME:  ${ARTIFACT_ENABLE_RUNTIME}")
-message(STATUS "  ARTIFACT_ENABLE_TESTS:    ${ARTIFACT_ENABLE_TESTS}")
-message(STATUS "  ARTIFACT_ENABLE_TRACY:    ${ARTIFACT_ENABLE_TRACY}")
-message(STATUS "  ARTIFACT_ENABLE_TOOLS:    ${ARTIFACT_ENABLE_TOOLS}")
-message(STATUS "  ARTIFACT_BUILD_PACKAGING: ${ARTIFACT_BUILD_PACKAGING}")
-message(STATUS "=================================================================")
+message(STATUS "═══════════════════════════════════════════════════════════")
+message(STATUS "  Artifact Engine Configuration")
+message(STATUS "═══════════════════════════════════════════════════════════")
+message(STATUS "  Build type:     ${CMAKE_BUILD_TYPE}")
+message(STATUS "  C++ standard:   ${CMAKE_CXX_STANDARD}")
+message(STATUS "  Platform:       ${CMAKE_SYSTEM_NAME}")
+message(STATUS "  Compiler:       ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
+message(STATUS "")
+message(STATUS "  Components:")
+message(STATUS "    Editor:       ${ARTIFACT_ENABLE_EDITOR}")
+message(STATUS "    Runtime:      ${ARTIFACT_ENABLE_RUNTIME}")
+message(STATUS "    Tests:        ${ARTIFACT_ENABLE_TESTS}")
+message(STATUS "    Tools:        ${ARTIFACT_ENABLE_TOOLS}")
+message(STATUS "    Packaging:    ${ARTIFACT_BUILD_PACKAGING}")
+message(STATUS "")
+message(STATUS "  Features:")
+message(STATUS "    Tracy:        ${ARTIFACT_ENABLE_TRACY}")
+message(STATUS "")
+message(STATUS "  Output dir:     ${CMAKE_BINARY_DIR}/bin")
+message(STATUS "═══════════════════════════════════════════════════════════")
+message(STATUS "")

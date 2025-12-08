@@ -5,14 +5,33 @@ Artifact is a cross-platform OpenGL 3.3+ engine/editor pairing focused on high i
 **Version:** 0.1.0 (Active Development)  
 **Status:** ⚠️ Undergoing architectural redesign - see [docs/](docs/) for details
 
+## 🚀 Quick Start
+
+### Building
+
+```bash
+# 1. Install vcpkg and set VCPKG_ROOT environment variable
+# 2. Configure
+cmake --preset debug
+
+# 3. Build
+cmake --build --preset debug-build
+
+# 4. Run
+./build/debug/bin/<Platform>/Debug/ArtifactEditor
+```
+
+**See [docs/BUILD.md](docs/BUILD.md) for detailed build instructions, troubleshooting, and IDE setup.**
+
 ## 📚 Documentation
 
 **NEW:** Comprehensive architecture analysis and redesign documentation available!
 
 ### Quick Links
-- 🎯 **[docs/EXECUTIVE_SUMMARY.md](docs/EXECUTIVE_SUMMARY.md)** - **START HERE** (High-level overview)
+- 🏗️ **[docs/BUILD.md](docs/BUILD.md)** - **Building & Dependencies** (vcpkg, CMake, troubleshooting)
+- 🎯 **[docs/EXECUTIVE_SUMMARY.md](docs/EXECUTIVE_SUMMARY.md)** - High-level overview
 - 🚀 **[docs/QUICK_START_CAMERA.md](docs/QUICK_START_CAMERA.md)** - Week 1 implementation guide
-- 🛠️ **[docs/IDE_SETUP.md](docs/IDE_SETUP.md)** - **IDE Setup Guide** (CLion, VS, VS Code)
+- 🛠️ **[docs/IDE_SETUP.md](docs/IDE_SETUP.md)** - IDE Setup Guide (CLion, VS, VS Code)
 - 📖 **[docs/README.md](docs/README.md)** - Full documentation index
 
 ### All Documents

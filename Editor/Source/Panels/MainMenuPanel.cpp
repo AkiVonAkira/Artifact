@@ -1,9 +1,8 @@
 ﻿#include "Panel.h"
-#include "EditorLayer.h"
+#include "Artifact/Editor/EditorLayer.h"
 
 #include <imgui.h>
 
-#include "Panel.h"
 
 namespace Artifact::Editor {
     namespace {
@@ -35,47 +34,49 @@ namespace Artifact::Editor {
                     ImGui::EndMenu();
                 }
 
-                if (ImGui::BeginMenu("Assets")) {
-                    if (ImGui::MenuItem("Refresh Lua Scripts", "F5")) {
-                        layer.refreshScriptAssets();
+                // Assets menu removed - Lua scripting has been removed
+                // if (ImGui::BeginMenu("Assets")) {
+                //     if (ImGui::MenuItem("Refresh Lua Scripts", "F5")) {
+                //         layer.refreshScriptAssets();
+                //     }
+                //     ImGui::EndMenu();
+                // }
+
+            if (ImGui::BeginMenu("Window")) {
+                if (ImGui::BeginMenu("Layout")) {
+                    if (ImGui::MenuItem("Reset to Default")) {
+                        layer.resetLayout();
                     }
                     ImGui::EndMenu();
                 }
 
-                if (ImGui::BeginMenu("Window")) {
-                    if (ImGui::BeginMenu("Layout")) {
-                        if (ImGui::MenuItem("Reset to Default")) {
-                            layer.resetLayout();
-                        }
-                        ImGui::EndMenu();
+                for (const auto &descriptor: layer.panelDescriptors()) {
+                    if (!descriptor.visibleInWindowMenu) {
+                        continue;
                     }
-
-                    for (const auto &descriptor: layer.panelDescriptors()) {
-                        if (!descriptor.visibleInWindowMenu) {
-                            continue;
-                        }
-                        if (ImGui::MenuItem(descriptor.label.c_str())) {
-                            layer.openPanel(descriptor.id);
-                        }
+                    if (ImGui::MenuItem(descriptor.label.c_str())) {
+                        layer.openPanel(descriptor.id);
                     }
-
-                    ImGui::MenuItem("ImGui Demo", nullptr, &state.showDemoWindow);
-                    ImGui::EndMenu();
                 }
 
-                if (ImGui::BeginMenu("Help")) {
-                    if (ImGui::MenuItem("Open Docs")) {
-                        layer.pushConsoleMessage("Docs live in docs/ - open Architecture.md for an overview.",
-                                                 spdlog::level::info);
-                    }
-                    ImGui::EndMenu();
-                }
-
-                layer.drawPlayControlsInMenuBar();
-                ImGui::EndMainMenuBar();
+                ImGui::MenuItem("ImGui Demo", nullptr, &state.showDemoWindow);
+                ImGui::EndMenu();
             }
-        };
+
+            if (ImGui::BeginMenu("Help")) {
+                if (ImGui::MenuItem("Open Docs")) {
+                    layer.pushConsoleMessage("Docs live in docs/ - open Architecture.md for an overview.",
+                                             spdlog::level::info);
+                }
+                ImGui::EndMenu();
+            }
+
+            layer.drawPlayControlsInMenuBar();
+            ImGui::EndMainMenuBar();
+        }
+    };
     }
+
 
     PanelPtr CreateMainMenuPanel() {
         return std::make_unique<MainMenuPanel>();

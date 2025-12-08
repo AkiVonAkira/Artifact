@@ -2,6 +2,8 @@
 #include "Artifact/Core/LogManager.h"
 #include <fstream>
 
+#include "Artifact/Core/Macros.h"
+
 namespace Artifact::Assets {
 
     // Binary format:

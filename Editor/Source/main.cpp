@@ -1,5 +1,5 @@
 #include "Artifact/Core/Application.h"
-#include "EditorLayer.h"
+#include "Artifact/Editor/EditorLayer.h"
 
 int main() {
     Artifact::Core::ApplicationCreateInfo info;

@@ -2,6 +2,8 @@
 #include "Artifact/Core/LogManager.h"
 #include <sstream>
 
+#include "Artifact/Core/Macros.h"
+
 namespace Artifact::Core {
 
     std::mutex MemoryChecker::s_mutex;

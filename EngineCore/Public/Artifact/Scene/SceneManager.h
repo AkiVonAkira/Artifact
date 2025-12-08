@@ -11,9 +11,6 @@
 #include <string>
 #include <entt/entt.hpp>
 
-namespace Artifact::Scripting {
-    class ScriptAssetService;
-}
 
 namespace Artifact::Scene {
     /**
@@ -116,9 +113,8 @@ namespace Artifact::Scene {
 
         /**
          * @brief Create a default scene with camera and actor
-         * @param scripts Optional script asset service for default scripts
          */
-        void CreateDefaultScene(const Scripting::ScriptAssetService *scripts = nullptr);
+        void CreateDefaultScene();
 
         // ========================================================================
 

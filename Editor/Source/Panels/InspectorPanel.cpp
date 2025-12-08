@@ -1,5 +1,5 @@
 ﻿#include "Panel.h"
-#include "EditorLayer.h"
+#include "Artifact/Editor/EditorLayer.h"
 
 #include <imgui.h>
 #include <imgui_stdlib.h>
@@ -11,8 +11,6 @@
 #include <variant>
 
 #include "Artifact/Scene/SceneService.h"
-#include "Artifact/Scripting/ScriptManager.h"
-#include "Artifact/Scripting/ScriptAsset.h"
 #include "Artifact/Scene/ComponentRegistry.h"
 
 namespace Artifact::Editor {
@@ -218,101 +216,6 @@ namespace Artifact::Editor {
                         }
                         ImGui::Checkbox("Double Sided", &material->doubleSided);
                     });
-                }
-
-                if (const auto *scriptMeta = componentRegistry.find<Scene::LuaScriptComponent>()) {
-                    auto *script = registry.try_get<Scene::LuaScriptComponent>(selected);
-                    RenderComponentSection(scriptMeta, registry, selected, [&, script, selected] {
-                        if (!script) {
-                            return;
-                        }
-                        const char *current = script->scriptName.empty() ? "None" : script->scriptName.c_str();
-                        if (ImGui::BeginCombo("Script", current)) {
-                            bool selectedScript = script->scriptName.empty();
-                            if (ImGui::Selectable("None", selectedScript)) {
-                                script->scriptName.clear();
-                            }
-                            // Use ScriptManager singleton to get available scripts
-                            auto availableScripts = Scripting::ScriptManager::Instance().GetAvailableScripts();
-                            for (const auto &scriptName: availableScripts) {
-                                selectedScript = script->scriptName == scriptName;
-                                if (ImGui::Selectable(scriptName.c_str(), selectedScript)) {
-                                    ctx.layer.assignScriptToSelection(scriptName);
-                                }
-                            }
-                            ImGui::EndCombo();
-                        }
-
-                        ImGui::Checkbox("Auto Reload", &script->autoReloadScript);
-
-                        const auto *scriptAsset = Scripting::ScriptManager::Instance().FindScript(script->scriptName);
-                        if (scriptAsset && !scriptAsset->properties.empty()) {
-                            ImGui::Separator();
-                            ImGui::TextUnformatted("Properties");
-                            for (const auto &property: scriptAsset->properties) {
-                                ImGui::PushID(property.name.c_str());
-                                auto fieldIt = script->serializedFields.find(property.name);
-                                auto commitChange = [&](const Scene::LuaPropertyValue &value) {
-                                    script->serializedFields[property.name] = value;
-                                    ctx.layer.onScriptPropertiesModified(selected);
-                                };
-
-                                switch (property.type) {
-                                    case Scripting::ScriptPropertyType::Boolean: {
-                                        bool value = property.boolDefault;
-                                        if (fieldIt != script->serializedFields.end() && std::holds_alternative<bool>(
-                                                fieldIt->second)) {
-                                            value = std::get<bool>(fieldIt->second);
-                                        }
-                                        if (ImGui::Checkbox(property.name.c_str(), &value)) {
-                                            commitChange(value);
-                                        }
-                                        break;
-                                    }
-                                    case Scripting::ScriptPropertyType::String: {
-                                        std::string value = property.stringDefault;
-                                        if (fieldIt != script->serializedFields.end() && std::holds_alternative<
-                                                std::string>(fieldIt->second)) {
-                                            value = std::get<std::string>(fieldIt->second);
-                                        }
-                                        if (ImGui::InputText(property.name.c_str(), &value)) {
-                                            commitChange(value);
-                                        }
-                                        break;
-                                    }
-                                    case Scripting::ScriptPropertyType::Number:
-                                    default: {
-                                        double currentProp = property.numberDefault;
-                                        if (fieldIt != script->serializedFields.end() && std::holds_alternative<double>(
-                                                fieldIt->second)) {
-                                            currentProp = std::get<double>(fieldIt->second);
-                                        }
-                                        float value = static_cast<float>(currentProp);
-                                        const float minValue = property.minValue
-                                                                   ? static_cast<float>(*property.minValue)
-                                                                   : -std::numeric_limits<float>::infinity();
-                                        const float maxValue = property.maxValue
-                                                                   ? static_cast<float>(*property.maxValue)
-                                                                   : std::numeric_limits<float>::infinity();
-                                        bool changed = false;
-                                        if (property.minValue && property.maxValue) {
-                                            changed = ImGui::SliderFloat(
-                                                property.name.c_str(), &value, minValue, maxValue);
-                                        } else {
-                                            const float speed = 0.1f;
-                                            changed = ImGui::DragFloat(property.name.c_str(), &value, speed, minValue,
-                                                                       maxValue);
-                                        }
-                                        if (changed) {
-                                            commitChange(static_cast<double>(value));
-                                        }
-                                        break;
-                                    }
-                                }
-                                ImGui::PopID();
-                            }
-                        }
-                    }, script ? &script->enabled : nullptr);
                 }
 
                 ImGui::Separator();

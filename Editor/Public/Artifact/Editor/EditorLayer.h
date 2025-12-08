@@ -22,9 +22,6 @@ namespace Artifact::Core {
     class PlayModeController;
 }
 
-namespace Artifact::Scripting {
-    struct ScriptAsset;
-}
 
 namespace Artifact::Scene {
     class SceneService;
@@ -117,9 +114,6 @@ namespace Artifact::Editor {
 
         void handleScriptAssetChange(const Assets::AssetChange &change);
 
-        const Scripting::ScriptAsset *findScriptByName(const std::string &name) const;
-
-        void synchronizeScriptFields(Scene::LuaScriptComponent &component, const Scripting::ScriptAsset &asset) const;
 
         Core::Application &m_application;
         Core::RuntimeConfig m_runtimeConfig{};

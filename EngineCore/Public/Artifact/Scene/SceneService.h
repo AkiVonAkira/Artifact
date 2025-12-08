@@ -8,9 +8,6 @@
 
 #include "Artifact/Scene/SceneContext.h"
 
-namespace Artifact::Scripting {
-    class ScriptAssetService;
-}
 
 namespace Artifact::Scene {
     class SceneService {
@@ -45,7 +42,7 @@ namespace Artifact::Scene {
 
         void resetScene();
 
-        void createDefaultScene(const Scripting::ScriptAssetService *scripts = nullptr);
+        void createDefaultScene();
 
         // Create a deep copy of the current scene into the provided SceneContext
         void Snapshot(SceneContext &out);

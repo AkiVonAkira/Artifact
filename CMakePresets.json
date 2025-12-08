@@ -8,8 +8,8 @@
   "configurePresets": [
     {
       "name": "base",
-      "displayName": "Base Configuration",
-      "description": "Shared settings for all configurations",
+      "displayName": "Base",
+      "description": "Base settings for all configurations (IDE-agnostic)",
       "hidden": true,
       "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": {
@@ -26,9 +26,9 @@
       }
     },
     {
-      "name": "vcpkg",
-      "displayName": "VCPKG Base",
-      "description": "Base configuration using vcpkg for dependencies",
+      "name": "toolchain-vcpkg",
+      "displayName": "vcpkg Toolchain (optional)",
+      "description": "Use vcpkg toolchain if VCPKG_ROOT is set",
       "hidden": true,
       "inherits": "base",
       "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
@@ -39,160 +39,76 @@
       }
     },
     {
-      "name": "windows-base",
-      "displayName": "Windows Base",
-      "description": "Base configuration for Windows builds",
-      "hidden": true,
-      "inherits": "base",
-      "condition": {
-        "type": "equals",
-        "lhs": "${hostSystemName}",
-        "rhs": "Windows"
-      },
-      "architecture": {
-        "value": "x64",
-        "strategy": "set"
-      },
-      "vendor": {
-        "microsoft.com/VisualStudioSettings/CMake/1.0": {
-          "hostOS": ["Windows"]
-        }
-      }
-    },
-    {
-      "name": "linux-base",
-      "displayName": "Linux Base",
-      "description": "Base configuration for Linux builds",
-      "hidden": true,
-      "inherits": "base",
-      "condition": {
-        "type": "equals",
-        "lhs": "${hostSystemName}",
-        "rhs": "Linux"
-      }
-    },
-    {
-      "name": "macos-base",
-      "displayName": "macOS Base",
-      "description": "Base configuration for macOS builds",
-      "hidden": true,
-      "inherits": "base",
-      "condition": {
-        "type": "equals",
-        "lhs": "${hostSystemName}",
-        "rhs": "Darwin"
-      }
-    },
-    {
-      "name": "ninja-base",
-      "displayName": "Ninja Base",
-      "description": "Base configuration using Ninja generator",
-      "hidden": true,
-      "generator": "Ninja"
-    },
-    {
-      "name": "windows-debug",
-      "displayName": "Windows Debug",
-      "description": "Debug build for Windows using Ninja",
-      "inherits": ["windows-base", "ninja-base", "vcpkg"],
+      "name": "debug",
+      "displayName": "Debug",
+      "description": "Generic Debug configuration (generator chosen by IDE or CLI)",
+      "inherits": ["base", "toolchain-vcpkg"],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug"
       }
     },
     {
-      "name": "windows-release",
-      "displayName": "Windows Release",
-      "description": "Release build for Windows using Ninja",
-      "inherits": ["windows-base", "ninja-base", "vcpkg"],
+      "name": "release",
+      "displayName": "Release",
+      "description": "Generic Release configuration",
+      "inherits": ["base", "toolchain-vcpkg"],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
         "ARTIFACT_ENABLE_TRACY": "OFF"
       }
     },
     {
-      "name": "windows-relwithdebinfo",
-      "displayName": "Windows RelWithDebInfo",
-      "description": "RelWithDebInfo build for Windows using Ninja",
-      "inherits": ["windows-base", "ninja-base", "vcpkg"],
+      "name": "relwithdebinfo",
+      "displayName": "RelWithDebInfo",
+      "description": "Generic RelWithDebInfo configuration",
+      "inherits": ["base", "toolchain-vcpkg"],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
         "ARTIFACT_ENABLE_TRACY": "OFF"
       }
     },
     {
-      "name": "linux-debug",
-      "displayName": "Linux Debug",
-      "description": "Debug build for Linux using Ninja",
-      "inherits": ["linux-base", "ninja-base"],
+      "name": "tests-debug",
+      "displayName": "Tests Debug",
+      "description": "Debug configuration focused on tests (heavy components off)",
+      "inherits": ["debug"],
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug"
-      }
-    },
-    {
-      "name": "linux-release",
-      "displayName": "Linux Release",
-      "description": "Release build for Linux using Ninja",
-      "inherits": ["linux-base", "ninja-base"],
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
-        "ARTIFACT_ENABLE_TRACY": "OFF"
-      }
-    },
-    {
-      "name": "macos-debug",
-      "displayName": "macOS Debug",
-      "description": "Debug build for macOS using Ninja",
-      "inherits": ["macos-base", "ninja-base"],
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug"
-      }
-    },
-    {
-      "name": "macos-release",
-      "displayName": "macOS Release",
-      "description": "Release build for macOS using Ninja",
-      "inherits": ["macos-base", "ninja-base"],
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
+        "ARTIFACT_ENABLE_EDITOR": "OFF",
+        "ARTIFACT_ENABLE_RUNTIME": "OFF",
+        "ARTIFACT_ENABLE_TESTS": "ON",
+        "ARTIFACT_ENABLE_TOOLS": "OFF",
+        "ARTIFACT_BUILD_PACKAGING": "OFF",
         "ARTIFACT_ENABLE_TRACY": "OFF"
       }
     }
   ],
   "buildPresets": [
     {
-      "name": "windows-debug-build",
-      "displayName": "Build Windows Debug",
-      "configurePreset": "windows-debug"
+      "name": "debug-build",
+      "displayName": "Build Debug",
+      "configurePreset": "debug"
     },
     {
-      "name": "windows-release-build",
-      "displayName": "Build Windows Release",
-      "configurePreset": "windows-release"
+      "name": "release-build",
+      "displayName": "Build Release",
+      "configurePreset": "release"
     },
     {
-      "name": "windows-relwithdebinfo-build",
-      "displayName": "Build Windows RelWithDebInfo",
-      "configurePreset": "windows-relwithdebinfo"
+      "name": "relwithdebinfo-build",
+      "displayName": "Build RelWithDebInfo",
+      "configurePreset": "relwithdebinfo"
     },
     {
-      "name": "linux-debug-build",
-      "displayName": "Build Linux Debug",
-      "configurePreset": "linux-debug"
-    },
+      "name": "tests-debug-build",
+      "displayName": "Build Tests (Debug)",
+      "configurePreset": "tests-debug"
+    }
+  ],
+  "testPresets": [
     {
-      "name": "linux-release-build",
-      "displayName": "Build Linux Release",
-      "configurePreset": "linux-release"
-    },
-    {
-      "name": "macos-debug-build",
-      "displayName": "Build macOS Debug",
-      "configurePreset": "macos-debug"
-    },
-    {
-      "name": "macos-release-build",
-      "displayName": "Build macOS Release",
-      "configurePreset": "macos-release"
+      "name": "tests-debug-ctest",
+      "displayName": "Run tests (Debug)",
+      "configurePreset": "tests-debug"
     }
   ]
 }

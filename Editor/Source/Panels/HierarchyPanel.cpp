@@ -6,7 +6,7 @@
 #include <algorithm>
 #include <vector>
 
-#include "EditorLayer.h"
+#include "Artifact/Editor/EditorLayer.h"
 #include "Artifact/Scene/SceneService.h"
 #include "Artifact/Scene/SceneManager.h"
 #include "Artifact/Core/Macros.h"

@@ -1,5 +1,5 @@
 ﻿#include "Panel.h"
-#include "EditorLayer.h"
+#include "Artifact/Editor/EditorLayer.h"
 #include "Artifact/Core/LogManager.h"
 
 #include <imgui.h>
