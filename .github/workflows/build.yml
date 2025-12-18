@@ -25,11 +25,11 @@ jobs:
       - name: Install Ninja
         uses: seanmiddleditch/gha-setup-ninja@v3
       - name: Configure
-        run: cmake --preset editor-debug
+        run: cmake --preset debug
       - name: Build
-        run: cmake --build --preset build-editor-debug
+        run: cmake --build --preset release
       - name: Test
-        run: ctest --preset test-editor
+        run: ctest --preset tests-debug
       - name: Upload binaries
         if: always()
         uses: actions/upload-artifact@v4
