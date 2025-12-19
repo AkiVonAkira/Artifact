@@ -22,21 +22,4 @@ namespace Artifact::Scene::Prefabs {
 
         return entity;
     }
-
-    entt::entity CreateLuaActor(SceneContext &scene, const LuaActorPrefabOptions &options) {
-        auto entity = CreateEntity(scene, options.name);
-
-        if (auto *transform = scene.registry.try_get<TransformComponent>(entity)) {
-            transform->transform.position = options.position;
-        }
-
-        if (auto *script = scene.registry.try_get<LuaScriptComponent>(entity)) {
-            script->scriptName = options.scriptName;
-            script->enabled = true;
-            script->autoReloadScript = options.autoReloadScript;
-            script->serializedFields.clear();
-        }
-
-        return entity;
-    }
 } // namespace Artifact::Scene::Prefabs

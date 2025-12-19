@@ -31,10 +31,15 @@ namespace Artifact::Editor {
 
         void applyFlyControls(float deltaSeconds, const glm::vec2 &delta);
 
+        void updateCameraRotation();
+
         EditorState &m_state;
         std::unique_ptr<Rendering::Camera> m_camera;
         glm::vec2 m_viewportSize{1.0f};
         bool m_viewportFocused{false};
         bool m_viewportHovered{false};
+
+        float m_pitch{0.0f};
+        float m_yaw{0.0f};
     };
 }

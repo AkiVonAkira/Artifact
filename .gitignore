@@ -15,3 +15,5 @@ ThirdParty/
 Logs
 imgui.ini
 /.vs
+Assets/Cooked/
+!/Assets/Cooked/README.md

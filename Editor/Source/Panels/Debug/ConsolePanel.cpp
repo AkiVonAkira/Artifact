@@ -69,16 +69,6 @@ namespace Artifact::Editor {
                     ImGui::SetScrollHereY(1.0f);
                 }
                 ImGui::EndChild();
-
-                if (ImGui::InputText("##luaInput", &ctx.state.luaInputBuffer, ImGuiInputTextFlags_EnterReturnsTrue)) {
-                    ctx.layer.executeLuaCommand(ctx.state.luaInputBuffer);
-                    ctx.state.luaInputBuffer.clear();
-                }
-                ImGui::SameLine();
-                if (ImGui::Button("Run Lua")) {
-                    ctx.layer.executeLuaCommand(ctx.state.luaInputBuffer);
-                    ctx.state.luaInputBuffer.clear();
-                }
                 ImGui::End();
             }
         };

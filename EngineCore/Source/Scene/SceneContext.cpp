@@ -1,4 +1,6 @@
 #include "Artifact/Scene/SceneContext.h"
+#include "Artifact/Core/MessageQueue.h"
+#include "Artifact/Core/Message.h"
 
 #include <string>
 
@@ -26,7 +28,8 @@ namespace Artifact::Scene {
         transform.nextSibling = entt::null;
         transform.previousSibling = entt::null;
 
-        scene.registry.emplace<LuaScriptComponent>(entity);
+        Core::MessageQueue::Instance().post(std::make_unique<Core::EntityCreatedMessage>(static_cast<uint32_t>(entity)));
+
         return entity;
     }
 } // namespace Artifact::Scene

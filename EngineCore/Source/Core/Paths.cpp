@@ -45,6 +45,10 @@ namespace Artifact::Core::Paths {
         return ProjectRoot() / "Assets";
     }
 
+    std::filesystem::path CookedAssetsRoot() {
+        return ProjectRoot() / "Assets" / "Cooked";
+    }
+
     std::filesystem::path ResolveAssetPath(std::string_view relativePath) {
         if (relativePath.empty()) {
             return std::filesystem::weakly_canonical(AssetsRoot());
@@ -61,5 +65,14 @@ namespace Artifact::Core::Paths {
             absolute /= sanitized;
         }
         return std::filesystem::weakly_canonical(absolute);
+    }
+
+    std::filesystem::path GetCookedMeshPath(const std::filesystem::path& originalPath) {
+        // Convert original mesh path to cooked path
+        // e.g., Assets/Models/cube.obj -> Assets/Cooked/Models/cube.mesh
+        auto relativePath = std::filesystem::relative(originalPath, AssetsRoot());
+        auto cookedPath = CookedAssetsRoot() / relativePath;
+        cookedPath.replace_extension(".mesh");
+        return cookedPath;
     }
 } // namespace Artifact::Core::Paths

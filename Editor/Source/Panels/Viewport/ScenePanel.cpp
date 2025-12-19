@@ -33,11 +33,28 @@ namespace Artifact::Editor {
                     // TODO: Add proper accessors to EditorLayer for runtime state
                     viewportManager->renderSceneViewport(
                         viewportSize,
-                        &ctx.scene,
+                        &ctx.layer.sceneManager()->sceneContext(),
                         &ctx.playMode,
                         runtimeScene,
                         runtimeActive
                     );
+
+                    // Handle 'F' key to focus on selected entity
+                    if (ImGui::IsWindowFocused() && ImGui::IsKeyPressed(ImGuiKey_F)) {
+                        const auto selectedEntity = ctx.layer.getSelectedEntity();
+                        if (selectedEntity != entt::null) {
+                            auto& registry = ctx.layer.sceneManager()->sceneContext().registry;
+                            if (registry.valid(selectedEntity)) {
+                                auto* transform = registry.try_get<Scene::TransformComponent>(selectedEntity);
+                                if (transform) {
+                                    auto* editorCamera = viewportManager->editorCamera();
+                                    if (editorCamera) {
+                                        editorCamera->focus(transform->transform.position, 5.0f);
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
 
                 ImGui::End();

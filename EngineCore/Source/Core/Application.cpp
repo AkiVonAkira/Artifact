@@ -7,12 +7,12 @@
 #include "Artifact/Assets/AssetWatcher.h"
 #include "Artifact/Assets/AssetManager.h"
 #include "Artifact/Scene/SceneManager.h"
-#include "Artifact/Scene/SceneService.h"
 #include "Artifact/Rendering/RenderManager.h"
 #include "Artifact/Physics/PhysicsManager.h"
 #include "Artifact/Core/Config.h"
 #include "Artifact/Core/Instrumentation.h"
 #include "Artifact/UI/Overlay.h"
+#include "Artifact/Core/MessageQueue.h"
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -99,12 +99,6 @@ namespace Artifact::Core {
         LOG_INFO("UI Overlay created successfully");
         spdlog::default_logger()->flush();
 
-        LOG_INFO("Creating SceneService...");
-        spdlog::default_logger()->flush();
-        m_sceneService = std::make_unique<Scene::SceneService>();
-        LOG_INFO("SceneService created successfully");
-        spdlog::default_logger()->flush();
-
         LOG_INFO("Creating PlayModeController...");
         spdlog::default_logger()->flush();
         m_playModeController = std::make_unique<PlayModeController>();
@@ -118,7 +112,7 @@ namespace Artifact::Core {
             });
 
             m_assetWatcher->watch(m_runtimeConfig.paths.shaderRoot, [](const Assets::AssetChange &change) {
-                spdlog::info("Shader changed: {} (queued for recompile)", change.path.string());
+                LOG_INFO("Shader changed: {} (queued for recompile)", change.path.string());
             });
         }
     }
@@ -148,6 +142,9 @@ namespace Artifact::Core {
 
         while (!m_shouldExit && !glfwWindowShouldClose(m_window)) {
             ARTIFACT_ZONE();
+
+            // Process messages
+            Artifact::Core::MessageQueue::Instance().process();
 
             // Update singleton managers
             TimeManager::Instance().Update();
@@ -230,10 +227,6 @@ namespace Artifact::Core {
 
     UI::Overlay *Application::overlay() {
         return m_overlay.get();
-    }
-
-    Scene::SceneService *Application::sceneService() {
-        return m_sceneService.get();
     }
 
     PlayModeController *Application::playMode() {

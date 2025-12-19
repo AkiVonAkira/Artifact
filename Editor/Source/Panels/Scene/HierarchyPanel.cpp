@@ -7,7 +7,6 @@
 #include <vector>
 
 #include "Artifact/Editor/EditorLayer.h"
-#include "Artifact/Scene/SceneService.h"
 #include "Artifact/Scene/SceneManager.h"
 #include "Artifact/Core/Macros.h"
 
@@ -30,7 +29,7 @@ namespace Artifact::Editor {
         }
 
         void HandleDrop(PanelContext &ctx, entt::entity dropped, entt::entity newParent) {
-            auto &registry = ctx.scene.context().registry;
+            auto &registry = ctx.layer.sceneManager()->sceneContext().registry;
             if (dropped == entt::null || !registry.valid(dropped)) {
                 return;
             }
@@ -44,7 +43,9 @@ namespace Artifact::Editor {
             }
 
             if (newParent == entt::null) {
-                ctx.scene.setParent(dropped, entt::null);
+                // TODO: Implement setParent in SceneManager or handle parenting directly
+                // For now, directly manipulate the transform
+                droppedTransform->parent = entt::null;
                 return;
             }
 
@@ -54,10 +55,13 @@ namespace Artifact::Editor {
 
             if (IsDescendant(registry, dropped, newParent)) {
                 const entt::entity droppedParent = droppedTransform->parent;
-                ctx.scene.setParent(newParent, droppedParent);
-                ctx.scene.setParent(dropped, newParent);
+                // TODO: Implement setParent in SceneManager
+                if (auto* parentTransform = registry.try_get<Scene::TransformComponent>(newParent)) {
+                    parentTransform->parent = droppedParent;
+                }
+                droppedTransform->parent = newParent;
             } else {
-                ctx.scene.setParent(dropped, newParent);
+                droppedTransform->parent = newParent;
             }
         }
 
@@ -91,7 +95,7 @@ namespace Artifact::Editor {
                 }
                 ImGui::Separator();
 
-                auto &registry = ctx.scene.context().registry;
+                auto &registry = ctx.layer.sceneManager()->sceneContext().registry;
                 auto view = registry.view<const Scene::TransformComponent, const Scene::NameComponent>();
                 std::vector<entt::entity> roots;
                 for (auto entity: view) {
@@ -110,7 +114,7 @@ namespace Artifact::Editor {
 
         private:
             void DrawEntityNode(PanelContext &ctx, entt::entity entity) {
-                auto &registry = ctx.scene.context().registry;
+                auto &registry = ctx.layer.sceneManager()->sceneContext().registry;
                 const auto &nameComponent = registry.get<const Scene::NameComponent>(entity);
                 const auto &transform = registry.get<const Scene::TransformComponent>(entity);
 

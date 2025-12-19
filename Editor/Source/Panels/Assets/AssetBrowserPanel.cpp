@@ -247,7 +247,6 @@ namespace Artifact::Editor {
                 const float maxSize = 128.0f;
                 const float thumbnailSize = minSize + (maxSize - minSize) * m_thumbnailSize;
                 const float padding = 8.0f;
-                const float labelHeight = 40.0f; // Space for wrapped text
                 const float cellSize = thumbnailSize + padding * 2;
                 const float panelWidth = ImGui::GetContentRegionAvail().x;
                 const int columns = std::max(1, static_cast<int>(panelWidth / cellSize));
@@ -326,8 +325,19 @@ namespace Artifact::Editor {
 
                 ImGui::InvisibleButton(asset.name.c_str(), ImVec2(size, size));
 
+                if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID)) {
+                    auto root = Artifact::Core::Paths::ProjectRoot();
+                    auto relative = std::filesystem::relative(asset.path, root);
+                    std::string relativeStr = relative.string();
+                    std::replace(relativeStr.begin(), relativeStr.end(), '\\', '/');
+
+                    ImGui::SetDragDropPayload("ASSET_PATH", relativeStr.c_str(), relativeStr.size() + 1);
+
+                    ImGui::Text("%s", asset.name.c_str());
+                    ImGui::EndDragDropSource();
+                }
+
                 if (ImGui::IsItemHovered()) {
-                    hovered = true;
                     // Hover highlight
                     drawList->AddRect(thumbnailMin, thumbnailMax, IM_COL32(100, 150, 200, 180), 2.0f, 0, 2.0f);
                     
@@ -427,22 +437,8 @@ namespace Artifact::Editor {
             }
 
             Assets::AssetType getAssetTypeFromExtension(const std::string& ext) {
-                if (ext == ".obj" || ext == ".fbx" || ext == ".gltf") {
-                    return Assets::AssetType::Mesh;
-                } else if (ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".tga" || ext == ".bmp") {
-                    return Assets::AssetType::Texture;
-                } else if (ext == ".vert" || ext == ".frag" || ext == ".glsl") {
-                    return Assets::AssetType::Shader;
-                } else if (ext == ".lua") {
-                    return Assets::AssetType::Script;
-                } else if (ext == ".wav" || ext == ".mp3" || ext == ".ogg") {
-                    return Assets::AssetType::Audio;
-                } else if (ext == ".scene") {
-                    return Assets::AssetType::Scene;
-                } else if (ext == ".prefab") {
-                    return Assets::AssetType::Prefab;
-                }
-                return Assets::AssetType::Unknown;
+                auto it = Assets::ExtensionMap.find(ext);
+                return it != Assets::ExtensionMap.end() ? it->second : Assets::AssetType::Unknown;
             }
 
             Assets::AssetType getFilterType(int index) {

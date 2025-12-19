@@ -58,6 +58,22 @@ namespace Artifact::Scene {
             return id;
         }
 
+        // Find metadata by ComponentId
+        inline const ComponentMetadata *findById(ComponentId id) const {
+            if (id < m_components.size()) return &m_components[id];
+            return nullptr;
+        }
+
+        // Find metadata by type T (if registered)
+        template<typename T>
+        const ComponentMetadata *find() const {
+            auto it = m_typeToId.find(typeid(T));
+            if (it != m_typeToId.end()) {
+                return findById(it->second);
+            }
+            return nullptr;
+        }
+
         // Template helper to register a concrete component type T. This will wire
         // up add/remove/has lambdas that operate on an entt::registry for type T.
         template<typename T>
@@ -66,6 +82,10 @@ namespace Artifact::Scene {
                                       bool editorVisible = true,
                                       bool allowMultiple = false,
                                       ComponentCategory category = ComponentCategory::Other) {
+            if (auto it = m_typeToId.find(typeid(T)); it != m_typeToId.end()) {
+                return it->second;
+            }
+
             ComponentId id = registerComponent(name, removable, editorVisible, allowMultiple, category);
 
             // Fill in the behavior lambdas for this type
@@ -91,19 +111,6 @@ namespace Artifact::Scene {
             return id;
         }
 
-        // Find metadata by ComponentId
-        inline const ComponentMetadata *findById(ComponentId id) const {
-            if (id < m_components.size()) return &m_components[id];
-            return nullptr;
-        }
-
-        // Find metadata by type T (if registered)
-        template<typename T>
-        inline const ComponentMetadata *find() const {
-            auto it = m_typeToId.find(typeid(T));
-            if (it == m_typeToId.end()) return nullptr;
-            return findById(it->second);
-        }
 
         // Non-template find: search by predicate (returns first match or nullptr)
         template<typename Predicate>

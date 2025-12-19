@@ -1,5 +1,6 @@
 ﻿#include "Artifact/Assets/MeshManager.h"
 #include "Artifact/Core/Paths.h"
+#include "Artifact/Core/MemoryChecker.h"
 
 #include <glm/glm.hpp>
 #include <spdlog/spdlog.h>
@@ -41,9 +42,10 @@ namespace Artifact::Assets {
                     iss >> n.x >> n.y >> n.z;
                     normals.push_back(glm::normalize(n));
                 } else if (token == "f") {
-                    int faceIndex = 0;
+                    // Collect all vertices in the face
+                    std::vector<uint32_t> faceIndices;
                     std::string vertSpec;
-                    while (iss >> vertSpec && faceIndex < 3) {
+                    while (iss >> vertSpec) {
                         int v = 0, vt = 0, vn = 0;
                         sscanf_s(vertSpec.c_str(), "%d/%d/%d", &v, &vt, &vn);
                         MeshVertex vertex{};
@@ -56,9 +58,17 @@ namespace Artifact::Assets {
                         if (vt > 0 && static_cast<size_t>(vt) <= texcoords.size()) {
                             vertex.texcoord = texcoords[vt - 1];
                         }
-                        mesh.indices.push_back(static_cast<uint32_t>(mesh.vertices.size()));
+                        faceIndices.push_back(static_cast<uint32_t>(mesh.vertices.size()));
                         mesh.vertices.push_back(vertex);
-                        ++faceIndex;
+                    }
+                    
+                    // Triangulate the face (fan triangulation for n > 3)
+                    if (faceIndices.size() >= 3) {
+                        for (size_t i = 1; i + 1 < faceIndices.size(); ++i) {
+                            mesh.indices.push_back(faceIndices[0]);
+                            mesh.indices.push_back(faceIndices[i]);
+                            mesh.indices.push_back(faceIndices[i + 1]);
+                        }
                     }
                 }
             }
@@ -80,7 +90,47 @@ namespace Artifact::Assets {
             return it->second.get();
         }
 
-        auto mesh = std::make_unique<Mesh>(ParseObj(normalized));
+        // Check for cooked binary mesh first
+        const auto cookedPath = Core::Paths::GetCookedMeshPath(normalized);
+        const auto originalPath = std::filesystem::path(normalized);
+
+        auto mesh = std::make_unique<Mesh>();
+        bool loadedFromCache = false;
+
+        // Try loading from binary cache if it exists and is newer than source
+        if (std::filesystem::exists(cookedPath)) {
+            const auto cookedTime = std::filesystem::last_write_time(cookedPath);
+            const auto originalTime = std::filesystem::last_write_time(originalPath);
+
+            if (cookedTime >= originalTime) {
+                spdlog::info("Loading mesh from binary cache: {}", cookedPath.string());
+                if (mesh->loadFromBinary(cookedPath.string())) {
+                    loadedFromCache = true;
+                } else {
+                    spdlog::warn("Failed to load binary cache, falling back to OBJ parsing");
+                }
+            } else {
+                spdlog::info("Binary cache is outdated, re-parsing OBJ: {}", path);
+            }
+        }
+
+        // If not loaded from cache, parse OBJ and save to cache
+        if (!loadedFromCache) {
+            *mesh = ParseObj(normalized);
+
+            // Save to binary cache
+            std::filesystem::create_directories(cookedPath.parent_path());
+            if (mesh->saveToBinary(cookedPath.string())) {
+                spdlog::info("Saved mesh to binary cache: {}", cookedPath.string());
+            } else {
+                spdlog::warn("Failed to save mesh to binary cache: {}", cookedPath.string());
+            }
+        }
+
+        Core::MemoryChecker::trackAllocation(mesh.get(),
+            sizeof(Mesh) + mesh->vertices.size() * sizeof(MeshVertex) + mesh->indices.size() * sizeof(uint32_t),
+            __FILE__, __LINE__, "MeshManager::loadMesh");
+
         const Mesh *ptr = mesh.get();
         m_meshes.emplace(normalized, std::move(mesh));
         return ptr;

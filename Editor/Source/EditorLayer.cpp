@@ -1,11 +1,11 @@
 #include "Artifact/Editor/EditorLayer.h"
+#include "Artifact/Editor/EditorSceneManager.h"
 #include "Artifact/Core/Application.h"
 #include "Artifact/Core/LogManager.h"
 #include "Artifact/Core/InputManager.h"
 #include "Artifact/Core/TimeManager.h"
 #include "Artifact/Rendering/RenderManager.h"
 #include "Artifact/Scene/SceneManager.h"
-#include "Artifact/Scene/SceneService.h"
 #include "Artifact/Core/PlayModeController.h"
 #include "Artifact/Scene/Components.h"
 #include "Artifact/UI/Overlay.h"
@@ -52,22 +52,6 @@ namespace Artifact::Editor {
             }
             return true;
         }
-
-        // Lua scripting has been removed from the engine
-        // void InvokeLifecycle(const sol::protected_function &fn,
-        //                      const sol::table &instance,
-        //                      const char *label,
-        //                      std::optional<float> delta = std::nullopt) {
-        //     if (!fn.valid()) {
-        //         return;
-        //     }
-        //
-        //     sol::protected_function_result result = delta.has_value() ? fn(instance, *delta) : fn(instance);
-        //     if (!result.valid()) {
-        //         sol::error err = result;
-        //         spdlog::error("[Lua] {} failed: {}", label, err.what());
-        //     }
-        // }
     } // namespace
 
 
@@ -76,12 +60,10 @@ namespace Artifact::Editor {
           , m_runtimeConfig(application.runtimeConfig()) {
         LOG_INFO("EditorLayer: Starting initialization...");
 
-        // Keep legacy pointers for SceneService and PlayModeController (will be migrated later)
-        m_sceneService = application.sceneService();
         m_playMode = application.playMode();
 
         LOG_INFO("EditorLayer: Creating managers...");
-        m_sceneManager = std::make_unique<EditorSceneManager>(m_sceneService);
+        m_sceneManager = std::make_unique<EditorSceneManager>();
         m_viewportManager = std::make_unique<EditorViewportManager>(m_state);
 
         LOG_INFO("EditorLayer: Creating default scene...");
@@ -151,7 +133,7 @@ namespace Artifact::Editor {
             descriptorEntry.closeable = descriptor ? descriptor->closeable : true;
             descriptorEntry.openFlag = openFlag;
             descriptorEntry.draw = [panelInstance, descriptor, openFlag, this]() {
-                PanelContext ctx{m_state, *this, *m_sceneService, *m_playMode};
+                PanelContext ctx{m_state, *this, *m_playMode};
                 ctx.windowTitle = descriptor ? descriptor->label.c_str() : panelInstance->instanceId.c_str();
                 ctx.windowId = panelInstance->instanceId.c_str();
                 ctx.openFlag = openFlag;
@@ -187,10 +169,6 @@ namespace Artifact::Editor {
         if (m_panelManager.createInstance(*descriptor)) {
             rebuildPanelDescriptors();
         }
-    }
-
-    Scene::SceneService &EditorLayer::sceneService() const {
-        return *m_sceneService;
     }
 
     Core::PlayModeController &EditorLayer::playMode() const {
@@ -242,15 +220,35 @@ namespace Artifact::Editor {
         }
     }
 
-    void EditorLayer::refreshScriptAssets(bool announce) {
-        // Script asset refresh removed - no longer using Lua scripting
-    }
-
     void EditorLayer::createDefaultScene() {
-        if (!m_sceneService) {
+        if (!m_sceneManager) {
             return;
         }
-        m_sceneService->createDefaultScene();
+        // Create a default camera entity
+        auto& registry = m_sceneManager->sceneContext().registry;
+        auto camera = registry.create();
+        registry.emplace<Scene::NameComponent>(camera, "Main Camera");
+        registry.emplace<Scene::ActiveComponent>(camera, true);
+        auto& transform = registry.emplace<Scene::TransformComponent>(camera);
+        transform.transform.position = glm::vec3(-5.0f, 2.5f, 0.0f);
+        transform.transform.rotation = glm::vec3(-25.0f, -90.0f, 0.0f);
+        auto& cameraComp = registry.emplace<Scene::CameraComponent>(camera);
+        cameraComp.isPrimary = true;
+        cameraComp.enabled = true;
+
+        // Create a default mesh entity
+        auto meshEntity = registry.create();
+        registry.emplace<Scene::NameComponent>(meshEntity, "Viking House");
+        registry.emplace<Scene::ActiveComponent>(meshEntity, true);
+        auto& meshTransform = registry.emplace<Scene::TransformComponent>(meshEntity);
+        meshTransform.transform.scale = glm::vec3(10.0f, 10.0f, 10.0f);
+
+        auto& meshComp = registry.emplace<Scene::MeshComponent>(meshEntity);
+        meshComp.meshPath = "Assets/Models/Viking_House.obj";
+
+        auto& materialComp = registry.emplace<Scene::MaterialComponent>(meshEntity);
+        materialComp.albedoTexture = "Assets/Models/Viking_House.png";
+        materialComp.color = glm::vec4(1.0f);
     }
 
     // Entity management methods - delegate to EditorSceneManager
@@ -280,41 +278,8 @@ namespace Artifact::Editor {
         return m_sceneManager ? m_sceneManager->getSelectedEntity() : entt::null;
     }
 
-    void EditorLayer::assignScriptToSelection(const std::string &scriptName) {
-        if (!m_sceneService) {
-            return;
-        }
-        const auto selected = m_sceneService->selectedEntity();
-        if (selected == entt::null) {
-            return;
-        }
-        auto &registry = m_sceneService->context().registry;
-        if (auto *script = registry.try_get<Scene::LuaScriptComponent>(selected)) {
-            const bool changedScript = script->scriptName != scriptName;
-            script->scriptName = scriptName;
-            if (changedScript) {
-                // Lua scripting removed - just clear fields
-                script->serializedFields.clear();
-            }
-            const auto *nameComponent = registry.try_get<Scene::NameComponent>(selected);
-            const std::string entityName = nameComponent ? nameComponent->name : "Entity";
-            pushConsoleMessage("Assigned script '" + scriptName + "' to " + entityName + " (scripting disabled)", spdlog::level::warn);
-        }
-    }
-
-
     void EditorLayer::pushConsoleMessage(const std::string &message, spdlog::level::level_enum level) {
         spdlog::log(level, "{}", message);
-    }
-
-    void EditorLayer::executeLuaCommand(const std::string &command) {
-        if (command.empty()) {
-            return;
-        }
-        LOG_INFO("> {}", command);
-        // Lua scripting removed - ScriptManager no longer exists
-        // Scripting::ScriptManager::Instance().ExecuteString(command);
-        pushConsoleMessage("Lua scripting has been removed from the engine", spdlog::level::warn);
     }
 
     void EditorLayer::enterPlayMode() {
@@ -323,9 +288,9 @@ namespace Artifact::Editor {
         }
         m_playMode->play();
         m_state.sceneClock = 0.0f;
-        if (m_sceneService) {
+        if (m_sceneManager) {
             // Create a runtime copy of the scene so runtime changes don't persist
-            m_sceneService->Snapshot(m_runtimeScene);
+            // TODO: Implement proper scene snapshot
             m_runtimeActive = true;
             m_runtimeCamera = Rendering::RenderManager::Instance().BindRuntimeCamera(m_runtimeScene.registry);
         }
@@ -345,7 +310,7 @@ namespace Artifact::Editor {
     }
 
     void EditorLayer::stepOnce() {
-        if (!m_playMode || !m_sceneService) {
+        if (!m_playMode) {
             return;
         }
         if (m_playMode->state() != Core::PlayModeController::State::Playing) {
@@ -408,55 +373,4 @@ namespace Artifact::Editor {
         }
         return selectedPath;
     }
-
-    void EditorLayer::handleScriptAssetChange(const Assets::AssetChange &change) {
-        // Script synchronization removed - no longer using Lua scripting
-        const std::string scriptName = change.path.stem().string();
-        switch (change.type) {
-            case Assets::AssetChange::Type::Added:
-                pushConsoleMessage("Lua script added: " + scriptName + " (scripting disabled)", spdlog::level::info);
-                break;
-            case Assets::AssetChange::Type::Modified:
-                pushConsoleMessage("Lua script updated: " + scriptName + " (scripting disabled)", spdlog::level::info);
-                break;
-            case Assets::AssetChange::Type::Removed:
-                pushConsoleMessage("Lua script removed: " + scriptName, spdlog::level::warn);
-                break;
-            case Assets::AssetChange::Type::Moved:
-                pushConsoleMessage("Lua script moved: " + scriptName + " (scripting disabled)", spdlog::level::info);
-                break;
-        }
-    }
-
-
-    void EditorLayer::onScriptPropertiesModified(entt::entity entity) {
-        if (!m_sceneService) {
-            return;
-        }
-        auto &registry = m_sceneService->context().registry;
-        if (!registry.valid(entity)) {
-            return;
-        }
-        auto *script = registry.try_get<Scene::LuaScriptComponent>(entity);
-        if (!script) {
-            return;
-        }
-        // Lua scripting removed - ScriptManager no longer exists
-        // Scripting::ScriptManager::Instance().OnScriptPropertiesChanged(entity, *script);
-    }
-
-
-    bool EditorLayer::createLuaScript(const std::string &scriptName) {
-        if (!IsValidScriptName(scriptName)) {
-            m_state.scriptCreationError = "Invalid script name.";
-            return false;
-        }
-
-        // Lua scripting removed - ScriptManager no longer exists
-        m_state.scriptCreationError = "Lua scripting has been removed from the engine";
-        pushConsoleMessage(m_state.scriptCreationError, spdlog::level::warn);
-        return false;
-    }
-
-    // Removed - viewport camera management moved to EditorViewportManager
 } // namespace Artifact::Editor

@@ -3,6 +3,8 @@
 #include <array>
 #include <cstdint>
 #include <memory>
+#include <unordered_map>
+#include <string>
 
 #include <glad/glad.h>
 #include <entt/entt.hpp>
@@ -82,6 +84,8 @@ namespace Artifact::Rendering {
         Rendering::Camera *BindRuntimeCamera(entt::registry &registry);
 
     private:
+        GLuint GetTexture(const std::string& path);
+
         void InitializeGlState();
 
         void DestroySkybox();
@@ -129,6 +133,7 @@ namespace Artifact::Rendering {
         GLuint m_basicShader{0};
         Rendering::CameraSystem m_cameraSystem{};
         Rendering::Camera m_fallbackCamera{Rendering::ProjectionType::Perspective};
-        std::unique_ptr<Assets::MeshManager> m_meshManager{};
+        std::unique_ptr<Assets::MeshManager> m_meshManager;
+        std::unordered_map<std::string, GLuint> m_textureCache;
     };
 } // namespace Artifact::Rendering

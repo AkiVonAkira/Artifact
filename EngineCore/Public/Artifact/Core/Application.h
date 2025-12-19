@@ -16,17 +16,9 @@ namespace Artifact::Rendering {
     using Renderer = RenderManager; // Backward compatibility alias
 }
 
-namespace Artifact::Scripting {
-    class LuaContext;
-}
-
 namespace Artifact::Assets {
     class AssetWatcher;
     struct AssetChange;
-}
-
-namespace Artifact::Scene {
-    class SceneService;
 }
 
 namespace Artifact::Core {
@@ -73,8 +65,6 @@ namespace Artifact::Core {
 
         const RuntimeConfig &runtimeConfig() const;
 
-        Scene::SceneService *sceneService();
-
         PlayModeController *playMode();
 
     private:
@@ -91,7 +81,6 @@ namespace Artifact::Core {
 
         std::unique_ptr<Assets::AssetWatcher> m_assetWatcher;
         std::unique_ptr<UI::Overlay> m_overlay;
-        std::unique_ptr<Scene::SceneService> m_sceneService;
         std::unique_ptr<PlayModeController> m_playModeController;
         std::unique_ptr<LoggingManager> m_loggingManager;
     };

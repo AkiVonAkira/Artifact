@@ -5,9 +5,8 @@
 
 #include <string>
 #include <filesystem>
-#include <chrono>
+#include <unordered_map>
 #include <cstdint>
-#include <memory>
 
 namespace Artifact::Assets {
     /**
@@ -23,6 +22,34 @@ namespace Artifact::Assets {
         Audio,
         Scene,
         Prefab
+    };
+
+    /**
+     * @brief Map file extensions to asset types
+     */
+    inline const std::unordered_map<std::string, AssetType> ExtensionMap = {
+        {".obj",   AssetType::Mesh},
+        {".fbx",   AssetType::Mesh},
+        {".gltf",  AssetType::Mesh},
+
+        {".png",   AssetType::Texture},
+        {".jpg",   AssetType::Texture},
+        {".jpeg",  AssetType::Texture},
+        {".tga",   AssetType::Texture},
+        {".bmp",   AssetType::Texture},
+
+        {".vert",  AssetType::Shader},
+        {".frag",  AssetType::Shader},
+        {".glsl",  AssetType::Shader},
+
+        {".lua",   AssetType::Script},
+
+        {".wav",   AssetType::Audio},
+        {".mp3",   AssetType::Audio},
+        {".ogg",   AssetType::Audio},
+
+        {".scene", AssetType::Scene},
+        {".prefab",AssetType::Prefab},
     };
 
     /**

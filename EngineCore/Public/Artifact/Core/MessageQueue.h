@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "Message.h"
+#include "Artifact/Core/Singleton.h"
 #include <deque>
 #include <functional>
 #include <memory>
@@ -14,10 +15,10 @@ namespace Artifact::Core {
     using MessageHandler = std::function<void(const Message&)>;
 
     /// Thread-safe message queue for async communication between engine subsystems
-    class MessageQueue {
+    class MessageQueue : public Singleton<MessageQueue> {
     public:
         MessageQueue() = default;
-        ~MessageQueue() = default;
+        ~MessageQueue() override = default;
 
         // Disable copy
         MessageQueue(const MessageQueue&) = delete;

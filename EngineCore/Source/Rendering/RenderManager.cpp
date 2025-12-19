@@ -6,6 +6,7 @@
 #include <glm/gtx/euler_angles.hpp>
 
 #include "Artifact/Assets/MeshManager.h"
+#include "Artifact/Assets/TextureLoader.h"
 #include "Artifact/Core/Paths.h"
 #include "Artifact/Core/LogManager.h"
 #include "Artifact/Core/Macros.h"
@@ -20,7 +21,7 @@
 namespace {
     std::string LoadShaderSource(std::string_view relativePath) {
         const auto path = Artifact::Core::Paths::ResolveAssetPath(relativePath);
-        std::ifstream file(path);
+        std::ifstream file(path.string().c_str());
         if (!file.is_open()) {
             LOG_ERROR("Failed to open shader: {}", path.string());
             return {};
@@ -194,6 +195,11 @@ namespace Artifact::Rendering {
         if (m_basicShader == 0) {
             return;
         }
+        
+        // Ensure culling is enabled at the start of mesh rendering
+        glEnable(GL_CULL_FACE);
+        glCullFace(GL_BACK);
+        
         glUseProgram(m_basicShader);
         GLint modelLoc = glGetUniformLocation(m_basicShader, "uModel");
         GLint vpLoc = glGetUniformLocation(m_basicShader, "uViewProj");
@@ -219,17 +225,61 @@ namespace Artifact::Rendering {
 
             glm::mat4 model = glm::mat4(1.0f);
             model = glm::translate(model, transform.transform.position);
-            model = model * glm::yawPitchRoll(glm::radians(transform.transform.rotation.y),
-                                              glm::radians(transform.transform.rotation.x),
-                                              glm::radians(transform.transform.rotation.z));
+            // Apply rotation using proper XYZ Euler angles (X=pitch, Y=yaw, Z=roll)
+            model = model * glm::eulerAngleXYZ(glm::radians(transform.transform.rotation.x),
+                                               glm::radians(transform.transform.rotation.y),
+                                               glm::radians(transform.transform.rotation.z));
             model = glm::scale(model, transform.transform.scale);
 
             glUniformMatrix4fv(modelLoc, 1, GL_FALSE, &model[0][0]);
             glUniform4fv(colorLoc, 1, &material.color[0]);
 
+            // Handle double-sided rendering
+            if (material.doubleSided) {
+                glDisable(GL_CULL_FACE);
+            }
+
+            // Bind Texture
+            if (!material.albedoTexture.empty()) {
+                // Simple texture cache/lookup could be added here, but for now we assume AssetManager handles it or we load it
+                // For this assignment, let's assume we need to load it or get it from a TextureManager.
+                // Since we don't have a global TextureManager accessible here easily without including it,
+                // let's use a static map or similar for this simple renderer, or better, use the AssetManager if possible.
+                // Wait, TextureLoader is in Assets.
+                // Let's just load it for now (inefficient but works for "Cube is textured")
+                // Ideally we should cache this GLuint.
+                // For the sake of the assignment "Cube is textured", we need to bind A texture.
+                // Let's check if we have a texture loaded.
+            }
+
+            // TODO: Proper texture management. For now, we rely on the user assigning a texture.
+            // We need a way to get the GLuint from the path.
+            // Let's add a simple texture cache to RenderManager for this assignment.
+            GLuint textureId = GetTexture(material.albedoTexture);
+            GLint hasTexLoc = glGetUniformLocation(m_basicShader, "uHasTexture");
+
+            if (textureId != 0) {
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, textureId);
+                // Assuming shader has "uAlbedoMap" or similar, or just defaults to unit 0
+                // We need to set the uniform if it exists.
+                GLint texLoc = glGetUniformLocation(m_basicShader, "uAlbedoMap");
+                if (texLoc != -1) glUniform1i(texLoc, 0);
+
+                if (hasTexLoc != -1) glUniform1i(hasTexLoc, 1);
+            } else {
+                if (hasTexLoc != -1) glUniform1i(hasTexLoc, 0);
+            }
+
             glBindVertexArray(drawData.vao);
             glDrawElements(GL_TRIANGLES, drawData.indexCount, GL_UNSIGNED_INT, nullptr);
             glBindVertexArray(0);
+
+            // Restore face culling if it was disabled for double-sided rendering
+            if (material.doubleSided) {
+                glEnable(GL_CULL_FACE);
+                glCullFace(GL_BACK);
+            }
 
             DestroyMesh(drawData);
         }
@@ -333,6 +383,41 @@ namespace Artifact::Rendering {
             data.vao = 0;
         }
         data.indexCount = 0;
+    }
+
+    GLuint RenderManager::GetTexture(const std::string& path) {
+        if (path.empty()) return 0;
+        if (auto it = m_textureCache.find(path); it != m_textureCache.end()) {
+            return it->second;
+        }
+
+        LOG_INFO("Loading texture: {}", path);
+        auto data = Assets::TextureLoader::loadFromFile(path);
+        if (!data.pixels) {
+            LOG_ERROR("Failed to load texture: {}", path);
+            return 0;
+        }
+
+        GLuint textureID;
+        glGenTextures(1, &textureID);
+        glBindTexture(GL_TEXTURE_2D, textureID);
+
+        GLenum format = GL_RGB;
+        if (data.channels == 1) format = GL_RED;
+        else if (data.channels == 3) format = GL_RGB;
+        else if (data.channels == 4) format = GL_RGBA;
+
+        glTexImage2D(GL_TEXTURE_2D, 0, format, data.width, data.height, 0, format, GL_UNSIGNED_BYTE, data.pixels);
+        glGenerateMipmap(GL_TEXTURE_2D);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        m_textureCache[path] = textureID;
+        LOG_INFO("Texture loaded successfully: {} (ID: {})", path, textureID);
+        return textureID;
     }
 
     void RenderManager::InitializeGlState() {

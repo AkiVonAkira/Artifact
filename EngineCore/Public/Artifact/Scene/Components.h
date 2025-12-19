@@ -45,15 +45,6 @@ namespace Artifact::Scene {
         bool enabled{true};
     };
 
-    using LuaPropertyValue = std::variant<double, bool, std::string>;
-
-    struct LuaScriptComponent {
-        std::string scriptName{};
-        bool enabled{true};
-        bool autoReloadScript{true};
-        std::unordered_map<std::string, LuaPropertyValue> serializedFields;
-    };
-
     struct MeshComponent {
         std::string meshPath{"Assets/Models/quadPlane.obj"};
     };

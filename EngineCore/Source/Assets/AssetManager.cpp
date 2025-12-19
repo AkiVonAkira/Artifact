@@ -47,19 +47,6 @@ namespace Artifact::Assets {
                     }
                 });
             }
-
-            // Watch for script changes
-            auto scriptPath = Core::Paths::ProjectRoot() / "Assets" / "Raw" / "Scripts";
-            if (std::filesystem::exists(scriptPath)) {
-                m_watcher->watch(scriptPath, [this](const AssetChange &change) {
-                    if (change.path.extension() == ".lua") {
-                        LOG_INFO("Script asset changed: {}", change.path.string());
-                        for (auto &callback: m_scriptCallbacks) {
-                            callback(change.path);
-                        }
-                    }
-                });
-            }
         }
 
         m_initialized = true;

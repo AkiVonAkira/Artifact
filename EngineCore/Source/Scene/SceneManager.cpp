@@ -51,10 +51,6 @@ namespace Artifact::Scene {
         return Prefabs::CreateMainCamera(m_scene, {});
     }
 
-    entt::entity SceneManager::CreateDefaultLuaActor() {
-        return Prefabs::CreateLuaActor(m_scene, {});
-    }
-
     entt::entity SceneManager::DuplicateEntity(entt::entity source) {
         if (!m_scene.registry.valid(source)) {
             return entt::null;
@@ -66,14 +62,6 @@ namespace Artifact::Scene {
         if (auto *transform = m_scene.registry.try_get<TransformComponent>(source)) {
             auto &duplicateTransform = m_scene.registry.get<TransformComponent>(duplicate);
             duplicateTransform.transform = transform->transform;
-        }
-
-        if (auto *script = m_scene.registry.try_get<LuaScriptComponent>(source)) {
-            auto &duplicateScript = m_scene.registry.get<LuaScriptComponent>(duplicate);
-            duplicateScript.scriptName = script->scriptName;
-            duplicateScript.enabled = script->enabled;
-            duplicateScript.autoReloadScript = script->autoReloadScript;
-            duplicateScript.serializedFields = script->serializedFields;
         }
 
         if (auto *active = m_scene.registry.try_get<ActiveComponent>(source)) {
@@ -168,11 +156,10 @@ namespace Artifact::Scene {
     void SceneManager::CreateDefaultScene() {
         ResetScene();
         entt::entity camera = CreateDefaultCamera();
-        entt::entity actor = CreateDefaultLuaActor();
 
         // Lua scripting removed - no script assignment needed
 
-        SelectEntity(actor);
+        SelectEntity(camera);
     }
 
     // ============================================================================

@@ -60,13 +60,5 @@ namespace Artifact::Scene {
             /*editorVisible*/ true,
             /*allowMultiple*/ false,
             ComponentCategory::Rendering);
-
-        // Scripting
-        registry.registerComponent<LuaScriptComponent>(
-            "Lua Script",
-            /*removable*/ true,
-            /*editorVisible*/ true,
-            /*allowMultiple*/ false,
-            ComponentCategory::Scripting);
     }
 } // namespace Artifact::Scene

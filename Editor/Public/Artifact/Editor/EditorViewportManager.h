@@ -4,10 +4,10 @@
 #include "EditorState.h"
 #include <imgui.h>
 #include <memory>
+#include <entt/entity/entity.hpp>
 
 namespace Artifact::Scene {
-    class SceneService;
-    class SceneContext;
+    struct SceneContext;
 }
 
 namespace Artifact::Rendering {
@@ -34,17 +34,18 @@ namespace Artifact::Editor {
         /**
          * @brief Render the scene viewport
          * @param viewportSize Viewport dimensions
-         * @param sceneService Scene service for rendering
+         * @param sceneContext Scene context for rendering
          * @param playMode Play mode controller
          * @param runtimeScene Runtime scene (when in play mode)
          * @param runtimeActive Whether runtime scene is active
          */
         void renderSceneViewport(
             const ImVec2& viewportSize,
-            Scene::SceneService* sceneService,
+            Scene::SceneContext* sceneContext,
             Core::PlayModeController* playMode,
             const Scene::SceneContext* runtimeScene,
-            bool runtimeActive
+            bool runtimeActive,
+            entt::entity selectedEntity = entt::null
         );
 
         /**
@@ -55,12 +56,12 @@ namespace Artifact::Editor {
         /**
          * @brief Draw camera preview overlay (picture-in-picture)
          */
-        void drawCameraPreviewOverlay(const ImVec2& viewportSize, Scene::SceneService* sceneService);
+        void drawCameraPreviewOverlay(const ImVec2& viewportSize, Scene::SceneContext* sceneContext, entt::entity selectedEntity);
 
         /**
          * @brief Draw scene camera frustums in viewport
          */
-        void drawSceneCameraFrustums(const ImVec2& panelMin, const ImVec2& panelSize, Scene::SceneService* sceneService);
+        void drawSceneCameraFrustums(const ImVec2& panelMin, const ImVec2& panelSize, Scene::SceneContext* sceneContext);
 
         /**
          * @brief Draw viewport input hints

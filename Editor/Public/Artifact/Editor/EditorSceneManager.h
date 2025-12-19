@@ -3,11 +3,8 @@
 #include <entt/entity/entity.hpp>
 #include <string>
 #include <optional>
-
-namespace Artifact::Scene {
-    class SceneService;
-    class SceneContext;
-}
+#include <memory>
+#include "Artifact/Scene/SceneContext.h"
 
 namespace Artifact::Editor {
 
@@ -19,7 +16,7 @@ namespace Artifact::Editor {
      */
     class EditorSceneManager {
     public:
-        explicit EditorSceneManager(Scene::SceneService* sceneService);
+        EditorSceneManager();
         ~EditorSceneManager() = default;
 
         /**
@@ -64,12 +61,13 @@ namespace Artifact::Editor {
         bool hasSelection() const { return m_selectedEntity != entt::null; }
 
         /**
-         * @brief Get the scene service
+         * @brief Get the scene context
          */
-        Scene::SceneService* sceneService() const { return m_sceneService; }
+        Scene::SceneContext& sceneContext() { return m_sceneContext; }
+        const Scene::SceneContext& sceneContext() const { return m_sceneContext; }
 
     private:
-        Scene::SceneService* m_sceneService;
+        Scene::SceneContext m_sceneContext;
         entt::entity m_selectedEntity = entt::null;
     };
 

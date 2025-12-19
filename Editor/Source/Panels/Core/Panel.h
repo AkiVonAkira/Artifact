@@ -5,10 +5,6 @@
 #include "Artifact/Editor/EditorState.h"
 
 namespace Artifact {
-    namespace Scene {
-        class SceneService;
-    }
-
     namespace Core {
         class PlayModeController;
     }
@@ -20,20 +16,14 @@ namespace Artifact::Editor {
     /**
      * @brief Context passed to editor panels
      *
-     * Note: Panels should prefer using singleton managers directly:
-     * - SceneManager::Instance() for scene operations
-     * - ScriptManager::Instance() for scripting
-     * - RenderManager::Instance() for rendering
-     * - etc.
-     *
-     * Legacy scene and playMode references kept for gradual migration.
+     * Panels access scene through layer.sceneManager()->sceneContext()
+     * and playMode through layer.playMode()
      */
     struct PanelContext {
         EditorState &state;
         EditorLayer &layer;
 
-        // Legacy references (TODO: Remove after panels migrate to singletons)
-        Scene::SceneService &scene;
+        // Legacy reference
         Core::PlayModeController &playMode;
 
         const char *windowTitle = nullptr;

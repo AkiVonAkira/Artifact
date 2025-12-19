@@ -34,14 +34,6 @@ namespace Artifact::Editor {
                     ImGui::EndMenu();
                 }
 
-                // Assets menu removed - Lua scripting has been removed
-                // if (ImGui::BeginMenu("Assets")) {
-                //     if (ImGui::MenuItem("Refresh Lua Scripts", "F5")) {
-                //         layer.refreshScriptAssets();
-                //     }
-                //     ImGui::EndMenu();
-                // }
-
             if (ImGui::BeginMenu("Window")) {
                 if (ImGui::BeginMenu("Layout")) {
                     if (ImGui::MenuItem("Reset to Default")) {

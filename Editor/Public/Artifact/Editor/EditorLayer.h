@@ -2,21 +2,16 @@
 
 #include <memory>
 #include <spdlog/common.h>
-#include <entt/entity/entity.hpp>
 #include <vector>
 #include <string>
-
 #include "EditorState.h"
 #include "EditorSceneManager.h"
 #include "EditorViewportManager.h"
-#include "Artifact/Assets/AssetWatcher.h"
-#include "Panels/Core/PanelFactories.h"
 #include "Artifact/Core/Config.h"
 #include "Artifact/Scene/Components.h"
 #include "Artifact/Scene/SceneContext.h"
 #include "Panels/Core/PanelRegistry.h"
 #include "Panels/Core/PanelInstances.h"
-#include "Artifact/UI/Overlay.h"
 
 namespace Artifact::Core {
     class Application;
@@ -25,7 +20,7 @@ namespace Artifact::Core {
 
 
 namespace Artifact::Scene {
-    class SceneService;
+    struct SceneContext;
 }
 
 
@@ -46,8 +41,6 @@ namespace Artifact::Editor {
 
         void drawStatusBarContent();
 
-        void refreshScriptAssets(bool announce = true);
-
         void createDefaultScene();
 
         std::string trimString(const std::string &value) const;
@@ -56,16 +49,7 @@ namespace Artifact::Editor {
 
         std::string requestTextureAsset(const std::string &currentPath);
 
-
-        void assignScriptToSelection(const std::string &scriptName);
-
-        bool createLuaScript(const std::string &scriptName);
-
         void pushConsoleMessage(const std::string &message, spdlog::level::level_enum level = spdlog::level::info);
-
-        void executeLuaCommand(const std::string &command);
-
-        void onScriptPropertiesModified(entt::entity entity);
 
         void enterPlayMode();
 
@@ -77,8 +61,7 @@ namespace Artifact::Editor {
 
         void resetLayout();
 
-        // Legacy accessors (prefer using singleton managers directly)
-        Scene::SceneService &sceneService() const; // TODO: Remove after panel updates
+        // Legacy accessors
         Core::PlayModeController &playMode() const;
 
         const std::vector<PanelDescriptor> &panelDescriptors() const;
@@ -86,8 +69,8 @@ namespace Artifact::Editor {
         void openPanel(const std::string &id, bool forceNewInstance = false);
 
         // Manager accessors
-        EditorSceneManager* sceneManager() { return m_sceneManager.get(); }
-        EditorViewportManager* viewportManager() { return m_viewportManager.get(); }
+        EditorSceneManager* sceneManager() const { return m_sceneManager.get(); }
+        EditorViewportManager* viewportManager() const { return m_viewportManager.get(); }
 
         // Entity management convenience wrappers (delegate to EditorSceneManager)
         entt::entity addEntity(const std::string& name);
@@ -101,14 +84,8 @@ namespace Artifact::Editor {
 
         void rebuildPanelDescriptors();
 
-        void synchronizeSceneScripts();
-
-        void handleScriptAssetChange(const Assets::AssetChange &change);
-
-
         Core::Application &m_application;
         Core::RuntimeConfig m_runtimeConfig{};
-        Scene::SceneService *m_sceneService{nullptr}; // TODO: Remove after migration to SceneManager
         Core::PlayModeController *m_playMode{nullptr}; // TODO: Migrate to singleton
 
         EditorState m_state;

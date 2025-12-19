@@ -10,11 +10,42 @@
 #include <string>
 #include <variant>
 
-#include "Artifact/Scene/SceneService.h"
+#include "Artifact/Scene/SceneContext.h"
 #include "Artifact/Scene/ComponentRegistry.h"
+#include "Artifact/Core/Paths.h"
+
+#include <filesystem>
+#include <vector>
 
 namespace Artifact::Editor {
     namespace {
+        std::vector<std::string> GetAssetFiles(const std::string& subDir, const std::vector<std::string>& extensions) {
+            std::vector<std::string> files;
+            auto root = Artifact::Core::Paths::AssetsRoot();
+            auto path = root;
+            if (!subDir.empty()) path /= subDir;
+
+            if (!std::filesystem::exists(path)) return files;
+
+            for (const auto& entry : std::filesystem::recursive_directory_iterator(path)) {
+                if (entry.is_regular_file()) {
+                    std::string ext = entry.path().extension().string();
+                    std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+
+                    for (const auto& validExt : extensions) {
+                        if (ext == validExt) {
+                            auto relative = std::filesystem::relative(entry.path(), root);
+                            std::string relativeStr = relative.string();
+                            std::replace(relativeStr.begin(), relativeStr.end(), '\\', '/');
+                            files.push_back("Assets/" + relativeStr);
+                            break;
+                        }
+                    }
+                }
+            }
+            return files;
+        }
+
         struct ComponentHeaderResult {
             bool expanded{false};
             bool removeRequested{false};
@@ -100,8 +131,8 @@ namespace Artifact::Editor {
                 return;
             }
             const auto selected = ctx.layer.getSelectedEntity();
-            auto &registry = ctx.scene.context().registry;
-            auto &componentRegistry = ctx.scene.context().components();
+            auto &registry = ctx.layer.sceneManager()->sceneContext().registry;
+            auto &componentRegistry = ctx.layer.sceneManager()->sceneContext().components();
 
             if (selected != entt::null && registry.valid(selected)) {
                 auto *active = registry.try_get<Scene::ActiveComponent>(selected);
@@ -189,12 +220,35 @@ namespace Artifact::Editor {
                         if (!mesh) {
                             return;
                         }
-                        ImGui::InputText("Mesh Path", &mesh->meshPath);
-                        if (ImGui::Button("Browse Mesh")) {
-                            std::string newPath = ctx.layer.requestMeshAsset(mesh->meshPath);
-                            if (!newPath.empty()) {
-                                mesh->meshPath = newPath;
+
+                        // Show only filename in preview, but store full path
+                        std::string previewName = mesh->meshPath.empty() ? "None" : std::filesystem::path(mesh->meshPath).filename().string();
+                        
+                        if (ImGui::BeginCombo("Mesh", previewName.c_str())) {
+                             auto files = GetAssetFiles("", {".obj"});
+                             
+                             for (const auto& file : files) {
+                                 bool isSelected = (mesh->meshPath == file);
+                                 std::string displayName = std::filesystem::path(file).filename().string();
+                                 if (ImGui::Selectable(displayName.c_str(), isSelected)) {
+                                     mesh->meshPath = file;
+                                 }
+                                 if (isSelected) ImGui::SetItemDefaultFocus();
+                             }
+                             ImGui::EndCombo();
+                        }
+                        
+                        // Drag and drop target for the combo box
+                        if (ImGui::BeginDragDropTarget()) {
+                            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ASSET_PATH")) {
+                                std::string path = (const char*)payload->Data;
+                                std::string ext = std::filesystem::path(path).extension().string();
+                                std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+                                if (ext == ".obj") {
+                                    mesh->meshPath = path;
+                                }
                             }
+                            ImGui::EndDragDropTarget();
                         }
                     });
                 }
@@ -206,14 +260,36 @@ namespace Artifact::Editor {
                             return;
                         }
                         ImGui::ColorEdit4("Color", glm::value_ptr(material->color));
-                        ImGui::InputText("Albedo Texture", &material->albedoTexture);
-                        ImGui::SameLine();
-                        if (ImGui::Button("Browse...##Texture")) {
-                            std::string newPath = ctx.layer.requestTextureAsset(material->albedoTexture);
-                            if (!newPath.empty()) {
-                                material->albedoTexture = newPath;
-                            }
+
+                        if (ImGui::BeginCombo("Albedo Texture", material->albedoTexture.c_str())) {
+                             auto files = GetAssetFiles("", {".png", ".jpg", ".jpeg", ".tga", ".bmp"});
+
+                             if (ImGui::Selectable("None", material->albedoTexture.empty())) {
+                                 material->albedoTexture = "";
+                             }
+
+                             for (const auto& file : files) {
+                                 bool isSelected = (material->albedoTexture == file);
+                                 if (ImGui::Selectable(file.c_str(), isSelected)) {
+                                     material->albedoTexture = file;
+                                 }
+                                 if (isSelected) ImGui::SetItemDefaultFocus();
+                             }
+                             ImGui::EndCombo();
                         }
+
+                        if (ImGui::BeginDragDropTarget()) {
+                            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ASSET_PATH")) {
+                                std::string path = (const char*)payload->Data;
+                                std::string ext = std::filesystem::path(path).extension().string();
+                                std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+                                if (ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".tga" || ext == ".bmp") {
+                                    material->albedoTexture = path;
+                                }
+                            }
+                            ImGui::EndDragDropTarget();
+                        }
+
                         ImGui::Checkbox("Double Sided", &material->doubleSided);
                     });
                 }

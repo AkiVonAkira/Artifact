@@ -58,11 +58,6 @@ namespace Artifact::Scene {
         entt::entity CreateDefaultCamera();
 
         /**
-         * @brief Create a default Lua actor entity
-         */
-        entt::entity CreateDefaultLuaActor();
-
-        /**
          * @brief Duplicate an entity
          * @param source Entity to duplicate
          * @return Duplicated entity handle

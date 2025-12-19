@@ -1,5 +1,4 @@
 ﻿#include "Artifact/Editor/EditorViewportManager.h"
-#include "Artifact/Scene/SceneService.h"
 #include "Artifact/Scene/SceneContext.h"
 #include "Artifact/Scene/Components.h"
 #include "Artifact/Rendering/RenderManager.h"
@@ -22,10 +21,11 @@ namespace Artifact::Editor {
 
     void EditorViewportManager::renderSceneViewport(
         const ImVec2& viewportSize,
-        Scene::SceneService* sceneService,
+        Scene::SceneContext* sceneContext,
         Core::PlayModeController* playMode,
         const Scene::SceneContext* runtimeScene,
-        bool runtimeActive
+        bool runtimeActive,
+        entt::entity selectedEntity
     ) {
         m_state.sceneViewportSize = viewportSize;
         const bool viewportFocused = ImGui::IsWindowFocused();
@@ -34,6 +34,15 @@ namespace Artifact::Editor {
         if (m_editorCamera) {
             m_editorCamera->setViewportSize({viewportSize.x, viewportSize.y});
             m_editorCamera->update(ImGui::GetIO().DeltaTime, viewportFocused, viewportHovered);
+
+            // Handle Focus on Selection (F key)
+            if (viewportFocused && ImGui::IsKeyPressed(ImGuiKey_F)) {
+                if (selectedEntity != entt::null && sceneContext) {
+                    if (auto* transform = sceneContext->registry.try_get<Scene::TransformComponent>(selectedEntity)) {
+                        m_editorCamera->focus(transform->transform.position);
+                    }
+                }
+            }
         }
 
         if (viewportSize.x <= 0.0f || viewportSize.y <= 0.0f) {
@@ -78,11 +87,11 @@ namespace Artifact::Editor {
             static_cast<int>(viewportSize.y)
         );
 
-        if (sceneService) {
+        if (sceneContext) {
             if (runtimeActive && runtimeScene) {
                 Rendering::RenderManager::Instance().RenderScene(*runtimeScene, camera);
             } else {
-                Rendering::RenderManager::Instance().RenderScene(sceneService->context(), camera);
+                Rendering::RenderManager::Instance().RenderScene(*sceneContext, camera);
             }
         } else {
             Rendering::RenderManager::Instance().DrawSkybox();
@@ -100,8 +109,13 @@ namespace Artifact::Editor {
                 ImVec2(1, 0)
             );
 
+            const ImVec2 panelMin = ImGui::GetItemRectMin();
+            const ImVec2 panelMax = ImGui::GetItemRectMax();
+            const ImVec2 panelSize = {panelMax.x - panelMin.x, panelMax.y - panelMin.y};
+            drawSceneCameraFrustums(panelMin, panelSize, sceneContext);
+
             drawEditorCameraOverlay(viewportSize, viewportFocused, viewportHovered);
-            drawCameraPreviewOverlay(viewportSize, sceneService);
+            drawCameraPreviewOverlay(viewportSize, sceneContext, selectedEntity);
         }
     }
 
@@ -148,6 +162,7 @@ namespace Artifact::Editor {
 
         ImGui::SetCursorScreenPos({backgroundPos.x + 6.0f, backgroundPos.y + textSize.y + 12.0f});
         ImGui::PushItemWidth(140.0f);
+        ImGui::Checkbox("Show Frustum", &m_state.editorCamera.showFrustum);
         ImGui::SliderFloat("Frustum Depth", &m_state.editorCamera.frustumPreviewDepth, 5.0f, 200.0f, "%.0f");
         ImGui::PopItemWidth();
 
@@ -161,7 +176,7 @@ namespace Artifact::Editor {
         bool hovered
     ) {
         const char* hint = focused || hovered
-            ? "WASD/EQ = Fly | Right-drag = Look | Middle-drag = Orbit"
+            ? "WASD/EQ = Fly | Right-drag = Look | Middle-drag = Orbit | F = Focus"
             : "Click viewport to control camera";
 
         const ImVec2 textSize = ImGui::CalcTextSize(hint);
@@ -180,7 +195,7 @@ namespace Artifact::Editor {
         drawList->AddRectFilled(boxMin, boxMax, IM_COL32(20, 20, 20, 160), 6.0f);
         drawList->AddRect(boxMin, boxMax, IM_COL32(70, 70, 70, 200), 6.0f);
         drawList->AddText(
-            {boxMin.x + paddingX * 0.5f, boxMin.y + paddingY * 0.3f},
+            ImVec2(boxMin.x + paddingX * 0.5f, boxMin.y + paddingY * 0.3f),
             IM_COL32(220, 220, 220, 255),
             hint
         );
@@ -189,13 +204,13 @@ namespace Artifact::Editor {
     void EditorViewportManager::drawSceneCameraFrustums(
         const ImVec2& panelMin,
         const ImVec2& panelSize,
-        Scene::SceneService* sceneService
+        Scene::SceneContext* sceneContext
     ) {
-        if (!sceneService || !m_editorCamera) {
+        if (!sceneContext || !m_editorCamera) {
             return;
         }
 
-        auto& registry = sceneService->context().registry;
+        auto& registry = sceneContext->registry;
         auto view = registry.view<Scene::TransformComponent, Scene::CameraComponent>();
         ImDrawList* drawList = ImGui::GetWindowDrawList();
         const float previewDepth = std::max(1.0f, m_state.editorCamera.frustumPreviewDepth);
@@ -234,32 +249,102 @@ namespace Artifact::Editor {
             const ImVec2 origin = {panelMin.x + screenPoint.x, panelMin.y + screenPoint.y};
             const float size = 14.0f;
 
+            // Always draw camera marker
             drawList->AddCircleFilled(origin, size * 0.35f, IM_COL32(255, 255, 255, 180));
             drawList->AddText({origin.x + size * 0.5f, origin.y - size}, IM_COL32(255, 255, 0, 230), "Camera");
 
-            // Draw lines from camera to frustum corners
-            for (const glm::vec3& corner : corners) {
-                const glm::vec2 projectedCorner = m_editorCamera->camera().worldToScreenPoint(
-                    corner, {panelSize.x, panelSize.y}
-                );
-                if (!std::isfinite(projectedCorner.x) || !std::isfinite(projectedCorner.y)) {
-                    continue;
-                }
-                const ImVec2 cornerPos = {panelMin.x + projectedCorner.x, panelMin.y + projectedCorner.y};
-                drawList->AddLine(origin, cornerPos, IM_COL32(200, 200, 0, 200), 1.0f);
+            // Only draw frustum lines if enabled
+            if (!m_state.editorCamera.showFrustum) {
+                return;
             }
 
-            // Draw frustum edges
+            // Helper functions for line clipping
+            const auto& editorCam = m_editorCamera->camera();
+            const glm::vec3 editorForward = editorCam.forward();
+            const glm::vec3 editorPos = editorCam.position();
+            const float nearPlane = editorCam.nearPlane();
+            
+            auto getDepth = [&](const glm::vec3& worldPos) -> float {
+                return glm::dot(worldPos - editorPos, editorForward);
+            };
+            
+            // Clip line segment against camera near plane
+            auto clipLine = [&](const glm::vec3& p1, const glm::vec3& p2, glm::vec3& outP1, glm::vec3& outP2) -> bool {
+                float d1 = getDepth(p1);
+                float d2 = getDepth(p2);
+                
+                // Both behind camera
+                if (d1 <= nearPlane && d2 <= nearPlane) {
+                    return false;
+                }
+                
+                // Both in front - no clipping needed
+                if (d1 > nearPlane && d2 > nearPlane) {
+                    outP1 = p1;
+                    outP2 = p2;
+                    return true;
+                }
+                
+                // One behind, one in front - clip at near plane
+                float t = (nearPlane - d1) / (d2 - d1);
+                glm::vec3 clippedPoint = p1 + t * (p2 - p1);
+                
+                if (d1 <= nearPlane) {
+                    outP1 = clippedPoint;
+                    outP2 = p2;
+                } else {
+                    outP1 = p1;
+                    outP2 = clippedPoint;
+                }
+                return true;
+            };
+            
+            // Draw lines from camera to frustum corners with clipping
+            for (const glm::vec3& corner : corners) {
+                glm::vec3 clippedStart, clippedEnd;
+                if (!clipLine(positionWorld, corner, clippedStart, clippedEnd)) {
+                    continue;
+                }
+                
+                const glm::vec2 screenStart = m_editorCamera->camera().worldToScreenPoint(
+                    clippedStart, {panelSize.x, panelSize.y}
+                );
+                const glm::vec2 screenEnd = m_editorCamera->camera().worldToScreenPoint(
+                    clippedEnd, {panelSize.x, panelSize.y}
+                );
+                
+                if (!std::isfinite(screenStart.x) || !std::isfinite(screenStart.y) ||
+                    !std::isfinite(screenEnd.x) || !std::isfinite(screenEnd.y)) {
+                    continue;
+                }
+                
+                drawList->AddLine(
+                    {panelMin.x + screenStart.x, panelMin.y + screenStart.y},
+                    {panelMin.x + screenEnd.x, panelMin.y + screenEnd.y},
+                    IM_COL32(200, 200, 0, 200), 1.0f
+                );
+            }
+
+            // Draw frustum edges with clipping
             for (int i = 0; i < 4; ++i) {
+                const int next = (i + 1) % 4;
+                
+                glm::vec3 clippedA, clippedB;
+                if (!clipLine(corners[i], corners[next], clippedA, clippedB)) {
+                    continue;
+                }
+                
                 const glm::vec2 a = m_editorCamera->camera().worldToScreenPoint(
-                    corners[i], {panelSize.x, panelSize.y}
+                    clippedA, {panelSize.x, panelSize.y}
                 );
                 const glm::vec2 b = m_editorCamera->camera().worldToScreenPoint(
-                    corners[(i + 1) % 4], {panelSize.x, panelSize.y}
+                    clippedB, {panelSize.x, panelSize.y}
                 );
+                
                 if (!std::isfinite(a.x) || !std::isfinite(a.y) || !std::isfinite(b.x) || !std::isfinite(b.y)) {
                     continue;
                 }
+                
                 drawList->AddLine(
                     {panelMin.x + a.x, panelMin.y + a.y},
                     {panelMin.x + b.x, panelMin.y + b.y},
@@ -272,37 +357,72 @@ namespace Artifact::Editor {
 
     void EditorViewportManager::drawCameraPreviewOverlay(
         const ImVec2& viewportSize,
-        Scene::SceneService* sceneService
+        Scene::SceneContext* sceneContext,
+        entt::entity selectedEntity
     ) {
-        if (!sceneService || !m_state.cameraPreview.showPreview) {
+        if (!sceneContext || !m_state.cameraPreview.showPreview) {
             return;
         }
 
-        auto& registry = sceneService->context().registry;
-        auto view = registry.view<Scene::CameraComponent>();
-        Scene::CameraComponent* primaryCam = nullptr;
+        auto& registry = sceneContext->registry;
+        Scene::CameraComponent* targetCam = nullptr;
+        Scene::TransformComponent* targetTransform = nullptr;
+        entt::entity targetEntity = entt::null;
 
-        view.each([&](entt::entity, Scene::CameraComponent& cameraComp) {
-            if (!cameraComp.enabled) {
-                return;
+        // Prioritize selected entity if it has a camera
+        if (selectedEntity != entt::null && registry.valid(selectedEntity)) {
+            if (auto* cam = registry.try_get<Scene::CameraComponent>(selectedEntity)) {
+                if (cam->enabled) {
+                    targetCam = cam;
+                    targetTransform = registry.try_get<Scene::TransformComponent>(selectedEntity);
+                    targetEntity = selectedEntity;
+                }
             }
-            if (!primaryCam || cameraComp.isPrimary) {
-                primaryCam = &cameraComp;
-            }
-        });
+        }
 
-        if (!primaryCam) {
+        // Fallback to primary camera
+        if (!targetCam) {
+            auto view = registry.view<Scene::CameraComponent, Scene::TransformComponent>();
+            view.each([&](entt::entity entity, Scene::CameraComponent& cameraComp, Scene::TransformComponent& transform) {
+                if (!cameraComp.enabled) {
+                    return;
+                }
+                if (!targetCam || cameraComp.isPrimary) {
+                    targetCam = &cameraComp;
+                    targetTransform = &transform;
+                    targetEntity = entity;
+                }
+            });
+        }
+
+        if (!targetCam || !targetTransform) {
             return;
         }
 
+        // Update camera with transform position and rotation
+        targetCam->camera.setPosition(targetTransform->transform.position);
+        
+        // Convert Euler angles to quaternion and set camera rotation
+        const glm::vec3 eulerRad = glm::radians(targetTransform->transform.rotation);
+        const glm::quat rotation = glm::quat(eulerRad);
+        targetCam->camera.setRotation(rotation);
+        
+        // Update aspect ratio based on preview size
         const float previewScale = m_state.cameraPreview.previewScale;
         const ImVec2 previewSize = {viewportSize.x * previewScale, viewportSize.y * previewScale};
+        const float aspectRatio = previewSize.x / previewSize.y;
+        targetCam->camera.setPerspective(
+            targetCam->camera.fieldOfView(),
+            aspectRatio,
+            targetCam->camera.nearPlane(),
+            targetCam->camera.farPlane()
+        );
 
         const uint32_t previewTexture = Rendering::RenderManager::Instance().RenderScenePreview(
-            sceneService->context(),
+            *sceneContext,
             static_cast<int>(previewSize.x),
             static_cast<int>(previewSize.y),
-            &primaryCam->camera
+            &targetCam->camera
         );
 
         if (previewTexture == 0) {
@@ -325,9 +445,9 @@ namespace Artifact::Editor {
         ImGui::Image(previewTextureId, previewSize, ImVec2(0, 1), ImVec2(1, 0));
 
         ImGui::Separator();
-        ImGui::Text("FOV: %.1f", primaryCam->camera.fieldOfView());
-        ImGui::Text("Near/Far: %.2f / %.2f", primaryCam->camera.nearPlane(), primaryCam->camera.farPlane());
-        ImGui::Text("Primary: %s", primaryCam->isPrimary ? "Yes" : "No");
+        ImGui::Text("FOV: %.1f", targetCam->camera.fieldOfView());
+        ImGui::Text("Near/Far: %.2f / %.2f", targetCam->camera.nearPlane(), targetCam->camera.farPlane());
+        ImGui::Text("Primary: %s", targetCam->isPrimary ? "Yes" : "No");
 
         ImGui::EndChild();
     }
