@@ -78,8 +78,9 @@ target_compile_definitions(artifact_engine
 target_link_libraries(artifact_engine
     PUBLIC
         artifact_third_party
-    PRIVATE
         glm::glm
+    PRIVATE
+        # ...existing code...
 )
 
 # =============================================================================
@@ -132,4 +133,3 @@ install(DIRECTORY Public/
     DESTINATION include
     FILES_MATCHING PATTERN "*.h"
 )
-
