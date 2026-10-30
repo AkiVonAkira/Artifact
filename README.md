@@ -2,8 +2,8 @@
 
 Artifact is a cross-platform OpenGL 3.3+ engine/editor pairing focused on high iteration speed, LuaJIT-driven modding, and a spline-shooter MVP. The project ships with a docking ImGui editor, a slim runtime, a cook-on-import asset pipeline, and a plugin model for gameplay features.
 
-**Version:** 0.1.0 (Active Development)  
-**Status:** ⚠️ Undergoing architectural redesign - see [docs/](docs/) for details
+**Version:** 0.1.0  
+**Status:** School project, no longer in active development. The architectural redesign described in [docs/](docs/) was not finished.
 
 ## 🚀 Quick Start
 
@@ -53,3 +53,7 @@ cmake --build --preset debug-build
 - **ECS**: EnTT for data-driven architecture, serialization, and eventing.
 - **UI**: ImGui with custom theming, docking, and editor widgets.
 - **Testing**: Catch2 unit tests, GitHub Actions matrix for Win/Linux/mac.
+
+## License
+
+Copyright (C) 2025-2026 Ilyas Kaya. Licensed under the GNU Affero General Public License v3.0 only, see [LICENSE](LICENSE). For a commercial license without the AGPL terms, contact me@kayzel.com.
